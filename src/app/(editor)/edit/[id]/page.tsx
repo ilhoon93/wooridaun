@@ -44,7 +44,16 @@ async function loadSampleDesigns(): Promise<EditorSampleDesign[]> {
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export default async function EditPage({ params }: { params: { id: string } }) {
+export default async function EditPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams: { start?: string };
+}) {
+  // "비슷하게 만들기"(preset)로 들어온 진입 — 추천구성 패널을 열지 않고 모바일
+  // 실시간 미리보기가 펼쳐진 상태로 시작한다.
+  const fromPreset = searchParams.start === 'preview';
   const supabase = createClient();
   const { data, error } = await supabase
     .from('invitations')
@@ -76,7 +85,10 @@ export default async function EditPage({ params }: { params: { id: string } }) {
       content={content}
       serverUpdatedAt={data.updated_at}
       // 한 번도 저장된 적 없는 신규 알림장이면 "추천으로 시작하기" 패널을 펼쳐 안내.
-      recommendOpen={isFresh}
+      // 단, 이미 디자인을 고르고 온 "비슷하게 만들기" 진입에서는 열지 않는다.
+      recommendOpen={isFresh && !fromPreset}
+      // preset 진입이면 모바일 실시간 미리보기를 펼친 채로 시작.
+      mobilePreviewDefaultOpen={fromPreset}
       sampleDesigns={sampleDesigns}
       isFresh={isFresh}
     />
