@@ -49,6 +49,8 @@ interface Props {
   serverUpdatedAt: string | null;
   /** 신규(미저장) 알림장이면 "추천으로 시작하기" 패널을 펼친 상태로 시작. */
   recommendOpen?: boolean;
+  /** "비슷하게 만들기" 진입 — 모바일 실시간 미리보기를 펼친 채로 시작. */
+  mobilePreviewDefaultOpen?: boolean;
   /** 운영자 admin 샘플에서 매핑한 추천 디자인 목록. */
   sampleDesigns: EditorSampleDesign[];
   /** 아직 편집·저장 안 된 새 알림장인지 — 추천 디자인 선택 시 샘플 데이터 자동 로딩 여부. */
@@ -61,6 +63,7 @@ export function EditorClient({
   content,
   serverUpdatedAt,
   recommendOpen = false,
+  mobilePreviewDefaultOpen = false,
   sampleDesigns,
   isFresh,
 }: Props) {
@@ -68,8 +71,9 @@ export function EditorClient({
   const status = useEditorStore((s) => s.status);
 
   // 모바일 실시간 미리보기 펼침 상태 — 펼치면 상단 편집/저장 바를 숨겨 미리보기에
-  // 화면을 온전히 내준다(EditorMobilePreview 와 공유).
-  const [mobilePreviewOpen, setMobilePreviewOpen] = useState(false);
+  // 화면을 온전히 내준다(EditorMobilePreview 와 공유). "비슷하게 만들기" 진입 시
+  // 펼친 상태로 시작.
+  const [mobilePreviewOpen, setMobilePreviewOpen] = useState(mobilePreviewDefaultOpen);
 
   // Hydrate the store with server-provided data on first mount.
   //

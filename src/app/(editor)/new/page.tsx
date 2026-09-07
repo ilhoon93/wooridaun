@@ -80,7 +80,9 @@ export default async function NewInvitationPage({ searchParams }: PageProps) {
       .single();
 
     if (!error && data) {
-      redirect(`/edit/${data.id}`);
+      // "비슷하게 만들기"(preset 적용)로 들어온 경우엔 에디터에서 추천구성 패널을
+      // 열지 않고 모바일 실시간 미리보기가 펼쳐진 상태로 시작하도록 플래그를 넘긴다.
+      redirect(`/edit/${data.id}${initial.presetApplied ? '?start=preview' : ''}`);
     }
     if (error && error.code !== PG_UNIQUE_VIOLATION) {
       throw new Error(error.message);
@@ -94,6 +96,8 @@ interface InitialState {
   brideName: string;
   weddingDate: string | null;
   content: InvitationContent;
+  /** preset(디자인 샘플)이 실제로 적용됐는지 — 에디터 초기 UI 결정용. */
+  presetApplied: boolean;
 }
 
 /**
@@ -114,13 +118,13 @@ async function buildInitialState(
 ): Promise<InitialState> {
   const content = defaultInvitationContent();
   if (!presetId) {
-    return { groomName: '', brideName: '', weddingDate: null, content };
+    return { groomName: '', brideName: '', weddingDate: null, content, presetApplied: false };
   }
 
   const { designs } = await getHomeSamplesConfig();
   const preset = designs.find((c) => c.id === presetId) ?? null;
   if (!preset) {
-    return { groomName: '', brideName: '', weddingDate: null, content };
+    return { groomName: '', brideName: '', weddingDate: null, content, presetApplied: false };
   }
 
   content.theme.colorTheme = preset.colorTheme;
@@ -138,5 +142,6 @@ async function buildInitialState(
     brideName: preset.brideName,
     weddingDate: preset.weddingDate,
     content,
+    presetApplied: true,
   };
 }
