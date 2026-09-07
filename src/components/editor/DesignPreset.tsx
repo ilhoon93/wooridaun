@@ -203,12 +203,12 @@ export function DesignPreset({
         // 페이드인하는 "잠깐 검은 화면" 깜빡임을 없앤다(한 번만 그려짐).
         <>
           {photo.length > 0 && (
-            <div className="mt-2 grid grid-cols-2 gap-2.5" hidden={view !== 'photo'}>
+            <div className={`mt-2 grid-cols-2 gap-2.5 ${view === 'photo' ? 'grid' : 'hidden'}`}>
               {photo.map(renderCard)}
             </div>
           )}
           {nophoto.length > 0 && (
-            <div className="mt-2 grid grid-cols-2 gap-2.5" hidden={view !== 'nophoto'}>
+            <div className={`mt-2 grid-cols-2 gap-2.5 ${view === 'nophoto' ? 'grid' : 'hidden'}`}>
               {nophoto.map(renderCard)}
             </div>
           )}
