@@ -1541,8 +1541,7 @@ function SavedRow({
               />
               <p className="text-muted-foreground">
                 {latest.archived
-                  ? '소장용 URL 은 만료 없이 영구 보관 · 하객용은 ' +
-                    `${daysRemaining(latest.expires_at)}일 후 만료 (${formatDate(latest.expires_at)})`
+                  ? '하객용 · 소장용 URL 모두 만료 없이 영구 보관돼요.'
                   : `${daysRemaining(latest.expires_at)}일 후 만료 · ${formatDate(latest.expires_at)}까지 공개`}
               </p>
 
@@ -1638,7 +1637,7 @@ function SavedRow({
                 <Link href={`/${p.slug}`} className="font-mono underline" target="_blank">
                   /{p.slug}
                 </Link>
-                <span>{daysRemaining(p.expires_at)}일 남음</span>
+                <span>{p.archived ? '영구 보관' : `${daysRemaining(p.expires_at)}일 남음`}</span>
               </li>
             ))}
           </ul>

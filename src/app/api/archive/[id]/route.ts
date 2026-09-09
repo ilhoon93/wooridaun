@@ -5,8 +5,8 @@ import { createClient } from '@/lib/supabase/server';
  * POST /api/archive/[id]
  *
  * 영구소장 적용 — `id` 는 `publications.id`. 1 archive credit 차감 + archived = true.
- * 적용된 publications 의 owner URL 은 만료 검사를 우회한다 (소장용 영구 보관).
- * 하객용 URL 은 영향을 받지 않고 기존 expires_at 그대로.
+ * archived=true 인 publications 는 하객용(/[slug]) · 소장용(/[slug]/o/[token]) URL 모두
+ * 만료 검사를 우회해 영구 유지된다 (public 페이지 게이트가 archived 면 expires_at 무시).
  */
 export async function POST(_req: Request, { params }: { params: { id: string } }) {
   const supabase = createClient();
