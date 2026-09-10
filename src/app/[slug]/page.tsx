@@ -104,16 +104,23 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const description =
     '저희 두 사람의 결혼을 알립니다. 전체 화면으로 보시려면 외부 브라우저로 열어주세요.';
   // 공유 카드 이미지 결정:
-  //   1) 표지(hero) 사진이 있으면 그 사진(public-images 공개 URL)을 그대로.
-  //   2) 사진이 없으면(일러스트·텍스트·무늬 등 모든 경우) /api/og/{slug} 로 알림장
-  //      자체 표지 카드(테마 배경 + 신랑·신부 이름·예식일 + 일러스트)를 동적 생성.
-  //      → 사이트 기본 og.png(마케팅 이미지)로 폴백돼 개인 링크에 AI 사진이 뜨던
-  //        문제를 없앤다.
-  const main = (inv.content as { main?: { heroImage?: unknown } } | null)?.main;
+  //   1) 표지에 실제로 사진을 그리는 레이아웃(포스터·액자)이고 hero 사진이 있으면
+  //      그 사진(public-images 공개 URL)을 그대로 쓴다.
+  //   2) 그 외(텍스트·일러스트 등 사진을 안 그리는 레이아웃, 또는 사진 없음)는
+  //      /api/og/{slug} 로 알림장 자체 표지 카드를 동적 생성.
+  //      → 사이트 기본 og.png(마케팅 이미지) 폴백을 없애고, 또 표지 화면엔 안 보이는데
+  //        데이터에만 남아 있는 "샘플 사진 heroImage"가 OG 에 잘못 뜨는 것도 막는다
+  //        (텍스트·일러스트 표지는 사진을 그리지 않으므로 heroImage 를 무시).
+  const main = (inv.content as {
+    main?: { heroImage?: unknown; layout?: string };
+  } | null)?.main;
   const heroRaw = main?.heroImage;
+  // 표지에 사진이 실제로 렌더되는 레이아웃만 hero 를 OG 로 사용.
+  const photoLayout =
+    main?.layout === 'poster' || main?.layout === 'frame' || main?.layout === 'polaroid';
   const base = process.env.NEXT_PUBLIC_BASE_URL || 'https://wooridaun.com';
   const ogImage: string =
-    typeof heroRaw === 'string' && /^https?:\/\//.test(heroRaw)
+    photoLayout && typeof heroRaw === 'string' && /^https?:\/\//.test(heroRaw)
       ? heroRaw
       : `${base}/api/og/${inv.slug}`;
   const images = [{ url: ogImage, width: 1200, height: 630, alt: title }];
