@@ -105,30 +105,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     '저희 두 사람의 결혼을 알립니다. 전체 화면으로 보시려면 외부 브라우저로 열어주세요.';
   // 공유 카드 이미지 결정:
   //   1) 표지(hero) 사진이 있으면 그 사진(public-images 공개 URL)을 그대로.
-  //   2) 사진이 없는 일러스트/텍스트 표지면 /api/og/{slug} 로 "테마 배경색 + 표지
-  //      일러스트" 이미지를 동적 생성해 사용.
-  //   3) 그 외(사진·일러스트 모두 없음)면 사이트 기본 og.png 상속.
-  const main = (inv.content as {
-    main?: {
-      heroImage?: unknown;
-      layout?: string;
-      textDesign?: { variant?: string };
-    };
-  } | null)?.main;
+  //   2) 사진이 없으면(일러스트·텍스트·무늬 등 모든 경우) /api/og/{slug} 로 알림장
+  //      자체 표지 카드(테마 배경 + 신랑·신부 이름·예식일 + 일러스트)를 동적 생성.
+  //      → 사이트 기본 og.png(마케팅 이미지)로 폴백돼 개인 링크에 AI 사진이 뜨던
+  //        문제를 없앤다.
+  const main = (inv.content as { main?: { heroImage?: unknown } } | null)?.main;
   const heroRaw = main?.heroImage;
-  let ogImage: string | null =
-    typeof heroRaw === 'string' && /^https?:\/\//.test(heroRaw) ? heroRaw : null;
-  if (!ogImage) {
-    const layout = main?.layout;
-    const textVariant = main?.textDesign?.variant;
-    const hasIllust =
-      layout === 'illustration' ||
-      (layout === 'text' && !!textVariant && textVariant !== 'none');
-    if (hasIllust) {
-      const base = process.env.NEXT_PUBLIC_BASE_URL || 'https://wooridaun.com';
-      ogImage = `${base}/api/og/${inv.slug}`;
-    }
-  }
+  const base = process.env.NEXT_PUBLIC_BASE_URL || 'https://wooridaun.com';
+  const ogImage: string =
+    typeof heroRaw === 'string' && /^https?:\/\//.test(heroRaw)
+      ? heroRaw
+      : `${base}/api/og/${inv.slug}`;
+  const images = [{ url: ogImage, width: 1200, height: 630, alt: title }];
   return {
     title,
     description,
@@ -136,7 +124,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     openGraph: {
       title,
       description,
-      ...(ogImage ? { images: [{ url: ogImage, alt: title }] } : {}),
+      images,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [ogImage],
     },
   };
 }
