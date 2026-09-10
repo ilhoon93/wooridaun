@@ -633,7 +633,9 @@ function GallerySlider({
 }
 
 // ─────────────────────────────────────────────────────────────
-// 그리드형 — 상단에 선택 사진 크게 + 하단에 그리드. 사진 클릭 시 상단 사진 교체.
+// 그리드형 — 상단에 선택 사진 크게 + 하단에 그리드. 상단 큰 사진을 좌우로 스와이프하면
+// 그 자리에서 다음/이전 사진으로 넘어간다(전체화면 뷰어를 새로 열지 않음). 그리드
+// 썸네일 클릭도 상단 사진을 교체. (확대 상태에선 ZoomableImage 가 스와이프를 막는다.)
 // ─────────────────────────────────────────────────────────────
 
 function GalleryGrid({
@@ -656,25 +658,78 @@ function GalleryGrid({
   const [selected, setSelected] = useState(0);
   const { counts, bursts, like } = useLikes(invitationId, isPreview, initialLikes);
 
+  const last = images.length - 1;
+  const clamped = Math.max(0, Math.min(last, selected));
+  const startRef = useRef<{ x: number; y: number } | null>(null);
+  const SWIPE_THRESHOLD = 30;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    startRef.current = { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = startRef.current;
+    startRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    // 세로 스크롤/확대와 구분: 가로 이동이 충분하고 세로보다 클 때만 사진 전환.
+    if (Math.abs(dx) < SWIPE_THRESHOLD || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx > 0 && clamped > 0) setSelected(clamped - 1);
+    if (dx < 0 && clamped < last) setSelected(clamped + 1);
+  };
+
   return (
-    <div className="relative flex flex-col gap-3">
-      <div className="relative z-20">
-        <ZoomableImage key={images[selected]} src={images[selected]} fit={fit} enabled={allowZoom}>
-          <CountBadge current={selected + 1} total={images.length} />
+    <div data-noswipe className="relative flex flex-col gap-3">
+      {/* 상단 큰 사진 — 좌우 스와이프로 그 자리에서 사진 전환. */}
+      <div className="relative z-20" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        <ZoomableImage key={images[clamped]} src={images[clamped]} fit={fit} enabled={allowZoom}>
+          <CountBadge current={clamped + 1} total={images.length} />
           <HeartLikeButton
-            index={selected}
-            count={counts[selected] ?? 0}
-            burstKey={bursts[selected]}
+            index={clamped}
+            count={counts[clamped] ?? 0}
+            burstKey={bursts[clamped]}
             onLike={like}
             disabled={mode === 'owner'}
           />
         </ZoomableImage>
+
+        {/* 데스크톱용 좌우 화살표(모바일은 스와이프). */}
+        {clamped > 0 && (
+          <button
+            type="button"
+            data-zoom-control
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelected(clamped - 1);
+            }}
+            aria-label="이전 사진"
+            className="absolute left-2 top-1/2 z-30 hidden h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-xl leading-none text-white hover:bg-black/65 sm:grid"
+          >
+            ‹
+          </button>
+        )}
+        {clamped < last && (
+          <button
+            type="button"
+            data-zoom-control
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelected(clamped + 1);
+            }}
+            aria-label="다음 사진"
+            className="absolute right-2 top-1/2 z-30 hidden h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/45 text-xl leading-none text-white hover:bg-black/65 sm:grid"
+          >
+            ›
+          </button>
+        )}
       </div>
 
       {/* 하단 그리드 — 클릭 시 상단 사진 교체. */}
       <ul className="grid grid-cols-3 gap-1">
         {images.map((url, i) => {
-          const active = i === selected;
+          const active = i === clamped;
           return (
             <li key={`${url}-${i}`}>
               <button
