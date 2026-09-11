@@ -38,9 +38,9 @@ const METRIC_ROWS: {
   },
   {
     key: 'engagement',
-    title: '방명록·축하',
-    desc: '방명록·서명·축하하기 누적 합계.',
-    placeholder: '방명록·축하',
+    title: '방명록',
+    desc: '하객이 남긴 방명록 메시지 누적 수(축하 버튼·서명 제외).',
+    placeholder: '방명록',
   },
 ];
 

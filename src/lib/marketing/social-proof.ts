@@ -58,8 +58,9 @@ export interface SocialProofMetric {
 }
 
 /**
- * 자동집계 지표 묶음 — 조회수(하객/소장용), 홈페이지 방문, 방명록·축하.
+ * 자동집계 지표 묶음 — 조회수(하객/소장용), 홈페이지 방문, 방명록.
  * 값은 RPC 로 자동 집계되고, 여기서는 "홈에 보일지 + 타일 라벨"만 관리한다.
+ * (engagement = 하객이 남긴 방명록 메시지 수. 축하 버튼/서명은 제외.)
  */
 export interface SocialProofMetrics {
   guestViews: SocialProofMetric;
@@ -72,7 +73,7 @@ export const DEFAULT_METRICS: SocialProofMetrics = {
   guestViews: { enabled: false, label: '하객 조회수' },
   ownerViews: { enabled: false, label: '소장용 조회수' },
   siteVisits: { enabled: false, label: '홈페이지 방문' },
-  engagement: { enabled: false, label: '방명록·축하' },
+  engagement: { enabled: false, label: '방명록' },
 };
 
 export interface SocialProofConfig {
@@ -284,9 +285,13 @@ export async function saveSocialProof(
   return { ok: true };
 }
 
-/** 집계값을 10단위로 내림(과장 방지). 0 이하는 0. */
-function roundDown10(n: number): number {
-  return n > 0 ? Math.floor(n / 10) * 10 : 0;
+/**
+ * 집계값 표시용 반올림 — 100 이상만 10단위로 내려 큰 숫자를 정돈하고, 100 미만은
+ * 그대로 노출한다(초기의 작은 수치가 0으로 내려가 사라지지 않도록). 0 이하는 0.
+ */
+function roundMetric(n: number): number {
+  if (n <= 0) return 0;
+  return n < 100 ? Math.floor(n) : Math.floor(n / 10) * 10;
 }
 
 /**
@@ -304,7 +309,7 @@ export async function getInvitationViewCounts(): Promise<{
     if (error || !data || typeof data !== 'object') return { guest: 0, owner: 0 };
     const g = Number((data as { guest?: unknown }).guest ?? 0);
     const o = Number((data as { owner?: unknown }).owner ?? 0);
-    return { guest: roundDown10(g), owner: roundDown10(o) };
+    return { guest: roundMetric(g), owner: roundMetric(o) };
   } catch {
     return { guest: 0, owner: 0 };
   }
@@ -318,13 +323,13 @@ export async function getSiteVisitCount(): Promise<number> {
     const { data, error } = await (supabase as any).rpc('public_site_visit_count');
     const n = typeof data === 'number' ? data : 0;
     if (error || n <= 0) return 0;
-    return roundDown10(n);
+    return roundMetric(n);
   } catch {
     return 0;
   }
 }
 
-/** 누적 방명록·서명·축하 합계 — public_engagement_count() RPC(076). 10단위 내림. */
+/** 누적 방명록 메시지 수 — public_engagement_count() RPC(077, 방명록만). */
 export async function getEngagementCount(): Promise<number> {
   try {
     const supabase = createClient();
@@ -332,7 +337,7 @@ export async function getEngagementCount(): Promise<number> {
     const { data, error } = await (supabase as any).rpc('public_engagement_count');
     const n = typeof data === 'number' ? data : 0;
     if (error || n <= 0) return 0;
-    return roundDown10(n);
+    return roundMetric(n);
   } catch {
     return 0;
   }
