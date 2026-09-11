@@ -38,7 +38,9 @@ export function AccountSlide({
   ].filter((g) => g.accounts.length > 0);
 
   const groups = side === 'groom' ? groomGroups : brideGroups;
-  const showSideTabs = groomGroups.length > 0 && brideGroups.length > 0;
+  // combined=true 면 탭 없이 신랑·신부 계좌를 한 화면에 함께 표시(옵션, 기본 false).
+  const combined = account.combined ?? false;
+  const showSideTabs = !combined && groomGroups.length > 0 && brideGroups.length > 0;
 
   // 계좌가 한쪽도 등록되지 않은 케이스 — 안내문구만 있으면 그것만 가운데에 표시한다
   // (예: "축의금은 정중히 사양합니다"). 안내문구도 없으면 기존 fallback.
@@ -58,11 +60,14 @@ export function AccountSlide({
     );
   }
 
+  // 표시할 그룹: 탭이면 선택된 측만, combined 면 신랑+신부 전부 함께, 그 외엔 있는 쪽.
   const activeGroups = showSideTabs
     ? groups
-    : groomGroups.length > 0
-      ? groomGroups
-      : brideGroups;
+    : combined
+      ? [...groomGroups, ...brideGroups]
+      : groomGroups.length > 0
+        ? groomGroups
+        : brideGroups;
 
   return (
     <section className="flex min-h-full flex-col gap-5 px-6 py-16">

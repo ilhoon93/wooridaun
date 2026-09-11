@@ -693,6 +693,11 @@ export const AccountSectionSchema = z
     groomMother: z.array(BankAccountSchema).max(3).default([]),
     brideFather: z.array(BankAccountSchema).max(3).default([]),
     brideMother: z.array(BankAccountSchema).max(3).default([]),
+    /**
+     * true 면 신랑측/신부측 탭을 나누지 않고 한 화면에 모두 함께 표시.
+     * 구버전 호환 위해 optional + 기본 false(=기존처럼 탭 분리) → 기존 알림장 무영향.
+     */
+    combined: z.boolean().default(false),
   })
   .default({
     enabled: true,
@@ -703,6 +708,7 @@ export const AccountSectionSchema = z
     groomMother: [],
     brideFather: [],
     brideMother: [],
+    combined: false,
   });
 
 // ── 슬라이드 상단 섹션 헤더(영문 라벨 + 한글 제목) ──────────
