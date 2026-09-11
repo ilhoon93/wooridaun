@@ -24,12 +24,24 @@ export function SocialProof({
   config,
   coupleCount,
   purchasePct,
+  guestViews = 0,
+  ownerViews = 0,
+  siteVisits = 0,
+  engagementCount = 0,
 }: {
   config: SocialProofConfig;
   /** 발행 건수 기반 자동 계산된 커플 수(10단위 올림). 0 이면 커플 수 타일 미노출. */
   coupleCount: number;
   /** 제작→결제 전환율(%). 통계에서 자동 계산. 0 이면 % 타일/문구 미노출. */
   purchasePct: number;
+  /** 하객용 누적 조회수(자동 집계, 10단위 내림). */
+  guestViews?: number;
+  /** 소장용 누적 조회수(자동 집계). */
+  ownerViews?: number;
+  /** 홈페이지 누적 방문수(자동 집계). */
+  siteVisits?: number;
+  /** 누적 방명록·서명·축하 합계(자동 집계). */
+  engagementCount?: number;
 }) {
   if (!config.enabled) return null;
 
@@ -43,7 +55,24 @@ export function SocialProof({
   const avgRating = config.averageRating; // 관리자 세팅값(0 이면 미노출).
   const showPurchase = config.purchaseStatEnabled && purchasePct > 0;
 
-  if (!hasCount && !showPurchase && avgRating <= 0 && reviews.length === 0 && !hasDesigns)
+  // 자동집계 지표 — 관리자 토글 ON + 값이 0보다 클 때만 노출.
+  const m = config.metrics;
+  const showGuestViews = !!m?.guestViews?.enabled && guestViews > 0;
+  const showOwnerViews = !!m?.ownerViews?.enabled && ownerViews > 0;
+  const showSiteVisits = !!m?.siteVisits?.enabled && siteVisits > 0;
+  const showEngagement = !!m?.engagement?.enabled && engagementCount > 0;
+
+  if (
+    !hasCount &&
+    !showPurchase &&
+    avgRating <= 0 &&
+    reviews.length === 0 &&
+    !hasDesigns &&
+    !showGuestViews &&
+    !showOwnerViews &&
+    !showSiteVisits &&
+    !showEngagement
+  )
     return null;
 
   const purchaseSentence = config.purchaseStatCaption.replace(
@@ -116,10 +145,45 @@ export function SocialProof({
                 stars={avgRating}
               />
             ),
+            showGuestViews && (
+              <StatTile
+                key="guestViews"
+                value={guestViews}
+                suffix="+"
+                label={m?.guestViews?.label || '하객 조회수'}
+              />
+            ),
+            showOwnerViews && (
+              <StatTile
+                key="ownerViews"
+                value={ownerViews}
+                suffix="+"
+                label={m?.ownerViews?.label || '소장용 조회수'}
+              />
+            ),
+            showSiteVisits && (
+              <StatTile
+                key="siteVisits"
+                value={siteVisits}
+                suffix="+"
+                label={m?.siteVisits?.label || '홈페이지 방문'}
+              />
+            ),
+            showEngagement && (
+              <StatTile
+                key="engagement"
+                value={engagementCount}
+                suffix="+"
+                label={m?.engagement?.label || '방명록·축하'}
+              />
+            ),
           ].filter(Boolean);
           if (tiles.length === 0) return null;
-          const cols =
-            tiles.length === 1
+          // 3개 이하는 한 줄(구분선), 4개 이상은 2열(모바일)/3열(데스크톱)로 줄바꿈.
+          const many = tiles.length > 3;
+          const cols = many
+            ? 'grid-cols-2 sm:grid-cols-3 gap-y-4'
+            : tiles.length === 1
               ? 'grid-cols-1'
               : tiles.length === 2
                 ? 'grid-cols-2'
@@ -127,7 +191,9 @@ export function SocialProof({
           return (
             <FadeUp scroll delay={0.2}>
               <div
-                className={`mt-6 grid ${cols} divide-x divide-[var(--wd-line)] overflow-hidden rounded-2xl border border-[var(--wd-line)] bg-[var(--wd-cream)] py-4 text-center`}
+                className={`mt-6 grid ${cols} ${
+                  many ? '' : 'divide-x divide-[var(--wd-line)]'
+                } overflow-hidden rounded-2xl border border-[var(--wd-line)] bg-[var(--wd-cream)] py-4 text-center`}
               >
                 {tiles}
               </div>

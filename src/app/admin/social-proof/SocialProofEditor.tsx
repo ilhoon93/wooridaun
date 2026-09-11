@@ -6,8 +6,43 @@ import type {
   SocialProofConfig,
   SocialProofReview,
   SocialProofDesign,
+  SocialProofMetric,
+  SocialProofMetrics,
 } from '@/lib/marketing/social-proof';
 import { saveSocialProofAction, uploadReviewImage } from './actions';
+
+/** 자동 집계 지표 행 정의 — 순서·설명·placeholder. */
+const METRIC_ROWS: {
+  key: keyof SocialProofMetrics;
+  title: string;
+  desc: string;
+  placeholder: string;
+}[] = [
+  {
+    key: 'guestViews',
+    title: '하객 조회수',
+    desc: '발행한 알림장을 하객이 열람한 누적 횟수(소장용 제외).',
+    placeholder: '하객 조회수',
+  },
+  {
+    key: 'ownerViews',
+    title: '소장용 조회수',
+    desc: '신랑·신부 소장용 URL 열람 누적 횟수.',
+    placeholder: '소장용 조회수',
+  },
+  {
+    key: 'siteVisits',
+    title: '홈페이지 방문',
+    desc: '우리다운 홈페이지(랜딩) 방문 세션 누적 수.',
+    placeholder: '홈페이지 방문',
+  },
+  {
+    key: 'engagement',
+    title: '방명록·축하',
+    desc: '방명록·서명·축하하기 누적 합계.',
+    placeholder: '방명록·축하',
+  },
+];
 
 const inputCls =
   'w-full rounded border border-[#E8DCC9] bg-white px-2.5 py-1.5 text-[13px] text-[#3D2E1F] focus:border-[#8B7355] focus:outline-none';
@@ -24,6 +59,15 @@ export function SocialProofEditor({
 
   const patch = (partial: Partial<SocialProofConfig>) =>
     setConfig((c) => ({ ...c, ...partial }));
+
+  const patchMetric = (
+    key: keyof SocialProofMetrics,
+    partial: Partial<SocialProofMetric>,
+  ) =>
+    setConfig((c) => ({
+      ...c,
+      metrics: { ...c.metrics, [key]: { ...c.metrics[key], ...partial } },
+    }));
 
   const save = () => {
     setMsg(null);
@@ -260,6 +304,61 @@ export function SocialProofEditor({
             {config.purchaseStatCaption.replace('{pct}', '92')}
           </span>
         </p>
+      </section>
+
+      {/* ── 자동 집계 지표 (조회수·방명록) ─────────────────── */}
+      <section className="flex flex-col gap-3 rounded-md border border-[#E8DCC9] bg-white p-4">
+        <div>
+          <h2 className="text-[13px] font-semibold text-[#3D2E1F]">
+            자동 집계 지표
+          </h2>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-[#8B7355]">
+            조회수·방문·방명록은 <strong className="text-[#3D2E1F]">자동으로 집계</strong>됩니다
+            (10단위 내림). 각 지표를 켜면 사회적 증거 타일로 노출됩니다. 값이 0이면 켜도
+            숨겨집니다.
+          </p>
+        </div>
+        {METRIC_ROWS.map((row) => {
+          const metric = config.metrics[row.key];
+          return (
+            <div
+              key={row.key}
+              className="flex flex-col gap-2 rounded-md border border-[#E8DCC9] bg-[#FAF7F2] p-3"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-[13px] font-medium text-[#3D2E1F]">{row.title}</div>
+                  <p className="mt-0.5 text-[11px] text-[#8B7355]">{row.desc}</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={metric.enabled}
+                  aria-label={`${row.title} 노출 여부`}
+                  onClick={() => patchMetric(row.key, { enabled: !metric.enabled })}
+                  className={`inline-flex h-6 w-11 shrink-0 items-center overflow-hidden rounded-full p-0.5 transition-colors ${
+                    metric.enabled ? 'bg-[#8B7355]' : 'bg-[#D9CCB8]'
+                  }`}
+                >
+                  <span
+                    className={`block h-5 w-5 rounded-full bg-white shadow-sm transition-transform ${
+                      metric.enabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+              <label className="flex flex-col gap-1">
+                <span className={labelCls}>타일 라벨</span>
+                <input
+                  className={`${inputCls} sm:w-64`}
+                  value={metric.label}
+                  onChange={(e) => patchMetric(row.key, { label: e.target.value })}
+                  placeholder={row.placeholder}
+                />
+              </label>
+            </div>
+          );
+        })}
       </section>
 
       {/* ── 디자인 사진 (마퀴 ①) ─────────────────────────── */}
