@@ -81,6 +81,22 @@ export function AccountEditor({ drag }: { drag?: SectionDragProps }) {
           ※ 계좌를 추가하지 않은 항목은 알림장에 표시되지 않습니다.
         </p>
 
+        {/* 표시 방식 — 기본(끔)은 신랑측/신부측 탭 분리, 켜면 한 화면에 함께. */}
+        <label className="flex items-start gap-2 rounded-md border bg-background px-3 py-2.5">
+          <input
+            type="checkbox"
+            checked={account.combined ?? false}
+            onChange={(e) => patch('account', { ...account, combined: e.target.checked })}
+            className="mt-0.5"
+          />
+          <span className="flex flex-col">
+            <span className="text-sm font-medium">신랑·신부 계좌 한 화면에 함께 보기</span>
+            <span className="text-xs text-muted-foreground">
+              끄면(기본) 신랑 측 / 신부 측 탭으로 나눠서 보여줍니다.
+            </span>
+          </span>
+        </label>
+
         <div className="flex flex-col gap-3">
           <h3 className="text-sm font-semibold">신랑 측</h3>
           {groomKeys.map((party) => (
