@@ -24,8 +24,12 @@ import {
   getPublishedCoupleCount,
   getPurchaseConversionPct,
   getActiveShowcaseIds,
+  getInvitationViewCounts,
+  getSiteVisitCount,
+  getEngagementCount,
 } from '@/lib/marketing/social-proof';
 import { SocialProof } from '@/components/marketing/SocialProof';
+import { SiteVisitTracker } from '@/components/marketing/SiteVisitTracker';
 import type {
   AiSnapItem,
   BeforeAfterConfig,
@@ -42,12 +46,24 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function LandingPage() {
-  const [catalog, home, socialProof, coupleCount, purchasePct] = await Promise.all([
+  const [
+    catalog,
+    home,
+    socialProof,
+    coupleCount,
+    purchasePct,
+    viewCounts,
+    siteVisits,
+    engagementCount,
+  ] = await Promise.all([
     getAvailableCatalog(),
     getHomeSamples(),
     getSocialProof(),
     getPublishedCoupleCount(),
     getPurchaseConversionPct(),
+    getInvitationViewCounts(),
+    getSiteVisitCount(),
+    getEngagementCount(),
   ]);
   const catalogCount = catalog.length;
 
@@ -66,11 +82,16 @@ export default async function LandingPage() {
 
   return (
     <>
+      <SiteVisitTracker />
       <Hero aiSnaps={home.aiSnaps} designs={home.designs} />
       <SocialProof
         config={socialProofForHome}
         coupleCount={coupleCount}
         purchasePct={purchasePct}
+        guestViews={viewCounts.guest}
+        ownerViews={viewCounts.owner}
+        siteVisits={siteVisits}
+        engagementCount={engagementCount}
       />
       <DesignAndValues designs={home.designs} ownerUrlExample={home.ownerUrlExample} />
       <AiSnapPreview

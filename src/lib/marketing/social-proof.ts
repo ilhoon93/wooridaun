@@ -51,6 +51,30 @@ export interface ShowcaseCover {
   content: InvitationContent;
 }
 
+/** 자동집계 지표 하나의 노출 토글 + 타일 라벨(관리자 제어). */
+export interface SocialProofMetric {
+  enabled: boolean;
+  label: string;
+}
+
+/**
+ * 자동집계 지표 묶음 — 조회수(하객/소장용), 홈페이지 방문, 방명록·축하.
+ * 값은 RPC 로 자동 집계되고, 여기서는 "홈에 보일지 + 타일 라벨"만 관리한다.
+ */
+export interface SocialProofMetrics {
+  guestViews: SocialProofMetric;
+  ownerViews: SocialProofMetric;
+  siteVisits: SocialProofMetric;
+  engagement: SocialProofMetric;
+}
+
+export const DEFAULT_METRICS: SocialProofMetrics = {
+  guestViews: { enabled: false, label: '하객 조회수' },
+  ownerViews: { enabled: false, label: '소장용 조회수' },
+  siteVisits: { enabled: false, label: '홈페이지 방문' },
+  engagement: { enabled: false, label: '방명록·축하' },
+};
+
 export interface SocialProofConfig {
   enabled: boolean;
   heading: string;
@@ -72,6 +96,8 @@ export interface SocialProofConfig {
   covers: ShowcaseCover[];
   /** 리뷰 텍스트 마퀴(별점 + 문구). */
   reviews: SocialProofReview[];
+  /** 자동집계 지표(조회수/홈방문/방명록·축하)의 노출 토글 + 라벨. */
+  metrics: SocialProofMetrics;
 }
 
 export const DEFAULT_SOCIAL_PROOF: SocialProofConfig = {
@@ -88,6 +114,7 @@ export const DEFAULT_SOCIAL_PROOF: SocialProofConfig = {
   designs: [],
   covers: [],
   reviews: [],
+  metrics: DEFAULT_METRICS,
 };
 
 const ShowcaseCoverSchema = z.object({
@@ -115,6 +142,19 @@ const DesignSchema = z.object({
   imageUrl: z.string(),
 });
 
+const MetricSchema = z.object({
+  enabled: z.boolean().default(false),
+  label: z.string().default(''),
+});
+const MetricsSchema = z
+  .object({
+    guestViews: MetricSchema.default(DEFAULT_METRICS.guestViews),
+    ownerViews: MetricSchema.default(DEFAULT_METRICS.ownerViews),
+    siteVisits: MetricSchema.default(DEFAULT_METRICS.siteVisits),
+    engagement: MetricSchema.default(DEFAULT_METRICS.engagement),
+  })
+  .default(DEFAULT_METRICS);
+
 const ConfigSchema = z.object({
   enabled: z.boolean().default(false),
   heading: z.string().default(DEFAULT_SOCIAL_PROOF.heading),
@@ -127,6 +167,7 @@ const ConfigSchema = z.object({
   purchaseStatCaption: z.string().default(DEFAULT_SOCIAL_PROOF.purchaseStatCaption),
   purchaseStatLabel: z.string().default(DEFAULT_SOCIAL_PROOF.purchaseStatLabel),
   designs: z.array(DesignSchema).default([]),
+  metrics: MetricsSchema,
   // 개별 커버 파싱 실패(스키마 변화 등) 시 그 커버만 버리고 나머지는 유지.
   covers: z
     .array(z.unknown())
@@ -171,6 +212,7 @@ export async function getSocialProof(): Promise<SocialProofConfig> {
       designs?: unknown;
       covers?: unknown;
       reviews?: unknown;
+      metrics?: unknown;
     };
     const parsed = ConfigSchema.safeParse({
       enabled: row.enabled ?? false,
@@ -189,6 +231,8 @@ export async function getSocialProof(): Promise<SocialProofConfig> {
       designs: row.designs ?? [],
       covers: row.covers ?? [],
       reviews: row.reviews ?? [],
+      // metrics 컬럼(마이그 076) 미적용 환경이면 undefined → 스키마 기본값(모두 off).
+      metrics: (row.metrics as object | null | undefined) ?? undefined,
     });
     if (!parsed.success) return DEFAULT_SOCIAL_PROOF;
     return parsed.data;
@@ -219,14 +263,79 @@ export async function saveSocialProof(
     designs: parsed.data.designs,
     covers: parsed.data.covers,
     reviews: parsed.data.reviews,
+    metrics: parsed.data.metrics,
   };
   // marketing_social_proof 는 자동생성 DB 타입(051 미반영)에 아직 없어 캐스팅.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  let { error } = await (supabase as any)
     .from('marketing_social_proof')
     .upsert(upsertRow, { onConflict: 'id' });
+  // migration 076(metrics 컬럼) 미적용 환경 호환 — 그 컬럼 때문에 실패하면 metrics 만
+  // 빼고 재시도해 나머지 설정은 저장되게 한다(지표 토글은 마이그 후 저장됨).
+  if (error && /metrics/i.test(error.message)) {
+    const rowWithoutMetrics: Record<string, unknown> = { ...upsertRow };
+    delete rowWithoutMetrics.metrics;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ({ error } = await (supabase as any)
+      .from('marketing_social_proof')
+      .upsert(rowWithoutMetrics, { onConflict: 'id' }));
+  }
   if (error) return { ok: false, error: error.message };
   return { ok: true };
+}
+
+/** 집계값을 10단위로 내림(과장 방지). 0 이하는 0. */
+function roundDown10(n: number): number {
+  return n > 0 ? Math.floor(n / 10) * 10 : 0;
+}
+
+/**
+ * 하객용/소장용 누적 조회수 — public_invitation_view_counts() RPC(076).
+ * 실패 시 {0,0}. 각 값은 10단위 내림.
+ */
+export async function getInvitationViewCounts(): Promise<{
+  guest: number;
+  owner: number;
+}> {
+  try {
+    const supabase = createClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any).rpc('public_invitation_view_counts');
+    if (error || !data || typeof data !== 'object') return { guest: 0, owner: 0 };
+    const g = Number((data as { guest?: unknown }).guest ?? 0);
+    const o = Number((data as { owner?: unknown }).owner ?? 0);
+    return { guest: roundDown10(g), owner: roundDown10(o) };
+  } catch {
+    return { guest: 0, owner: 0 };
+  }
+}
+
+/** 홈페이지(랜딩) 누적 방문 수 — public_site_visit_count() RPC(076). 10단위 내림. */
+export async function getSiteVisitCount(): Promise<number> {
+  try {
+    const supabase = createClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any).rpc('public_site_visit_count');
+    const n = typeof data === 'number' ? data : 0;
+    if (error || n <= 0) return 0;
+    return roundDown10(n);
+  } catch {
+    return 0;
+  }
+}
+
+/** 누적 방명록·서명·축하 합계 — public_engagement_count() RPC(076). 10단위 내림. */
+export async function getEngagementCount(): Promise<number> {
+  try {
+    const supabase = createClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any).rpc('public_engagement_count');
+    const n = typeof data === 'number' ? data : 0;
+    if (error || n <= 0) return 0;
+    return roundDown10(n);
+  } catch {
+    return 0;
+  }
 }
 
 /**

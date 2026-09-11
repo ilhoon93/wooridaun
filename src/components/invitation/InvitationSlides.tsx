@@ -222,7 +222,7 @@ export function InvitationSlides({
 
   return (
     <>
-      <VisitTracker invitationId={invitationId} disabled={isPreview} />
+      <VisitTracker invitationId={invitationId} disabled={isPreview} role={mode} />
       <SlideContainer
         colorTheme={content.theme.colorTheme}
         petalType={content.theme.petalType}
