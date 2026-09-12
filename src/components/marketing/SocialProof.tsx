@@ -174,7 +174,7 @@ export function SocialProof({
                 key="engagement"
                 value={engagementCount}
                 suffix="+"
-                label={m?.engagement?.label || '방명록·축하'}
+                label={m?.engagement?.label || '방명록'}
               />
             ),
           ].filter(Boolean);
