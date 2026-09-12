@@ -1009,51 +1009,24 @@ function SnapResultCard({
       ? '얼굴 강화 모드'
       : '기본 모드';
 
-  // 이미지 저장 — 동일 출처 다운로드 라우트로 받는다(외부 URL 직접 fetch 의 CORS
-  // 문제 회피). 모바일은 공유 시트(navigator.share)로 사진 저장/공유(iOS Safari 는
-  // a[download] 를 무시하므로 공유가 최선). 데스크톱은 a[download] 로 저장.
-  const handleDownload = async (e: React.MouseEvent) => {
+  // 이미지 저장 — 공유 시트 없이 "파일로 저장". 동일 출처 다운로드 라우트가
+  // Content-Disposition: attachment 를 주므로, 그 URL 로의 a[download] 클릭이
+  // PC/안드로이드는 다운로드 폴더에, iOS Safari 는 '파일' 앱에 저장한다(사진 앱에
+  // 바로 저장은 브라우저 보안상 불가 — 그건 길게 눌러 저장/공유가 필요).
+  const handleDownload = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!job.result_url || dlBusy) return;
     setDlBusy(true);
-    const downloadUrl = `/api/snap/jobs/${job.id}/download`;
     try {
-      const res = await fetch(downloadUrl); // 동일 출처 → CORS 없음
-      if (!res.ok) throw new Error('fetch failed');
-      const blob = await res.blob();
-      const ext = blob.type.includes('png') ? 'png' : 'jpg';
-      const filename = `wedding-snap-${job.id.slice(0, 8)}.${ext}`;
-
-      // 모바일: 파일 공유 지원 시 공유 시트로(사진 앱 저장/카톡 전송 등).
-      const nav = navigator as Navigator & {
-        canShare?: (data?: { files?: File[] }) => boolean;
-      };
-      const file = new File([blob], filename, { type: blob.type || 'image/jpeg' });
-      if (typeof nav.share === 'function' && nav.canShare?.({ files: [file] })) {
-        try {
-          await nav.share({ files: [file] });
-          return;
-        } catch (err) {
-          // 사용자가 공유를 취소하면 그대로 종료(다운로드로 중복 실행하지 않음).
-          if (err instanceof Error && err.name === 'AbortError') return;
-          // 그 외 오류는 아래 다운로드로 폴백.
-        }
-      }
-
-      // 데스크톱(및 공유 미지원): blob 을 a[download] 로 저장.
-      const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
+      a.href = `/api/snap/jobs/${job.id}/download`;
+      a.download = ''; // 파일명은 서버 Content-Disposition 이 지정.
       document.body.appendChild(a);
       a.click();
       a.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      // 최종 폴백 — 동일 출처 라우트로 이동(attachment 헤더로 저장 유도).
-      window.location.href = downloadUrl;
     } finally {
+      // 다운로드는 브라우저가 이어받으므로 바로 버튼 상태 복구.
       setDlBusy(false);
     }
   };
