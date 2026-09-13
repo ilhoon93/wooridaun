@@ -249,7 +249,7 @@ export type IllustrationDesign = z.infer<typeof IllustrationDesignSchema>;
 //   - letter : text-letter.png       — 봉투/편지 일러스트
 //   - none   : 데코 이미지 없이 텍스트만 — 가장 미니멀한 옵션
 
-export const TEXT_VARIANTS = ['flower', 'letter', 'none'] as const;
+export const TEXT_VARIANTS = ['flower', 'letter', 'borderFloral', 'none'] as const;
 export type TextVariant = (typeof TEXT_VARIANTS)[number];
 
 // 이름 정렬 방식 —
