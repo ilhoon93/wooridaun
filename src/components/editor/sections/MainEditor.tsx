@@ -788,6 +788,7 @@ const TEXT_VARIANT_LABELS: Record<TextVariant, { name: string; hint: string }> =
   letter: { name: '편지', hint: '편지·봉투 일러스트' },
   borderFloral: { name: '수채화 플로럴', hint: '위·아래 수채화 꽃, 가운데 여백' },
   cornerFrame: { name: '라인 프레임', hint: '얇은 사각 테두리 + 모서리 라인 꽃' },
+  archFloral: { name: '수채화 아치', hint: '상단 아치형 수채화 꽃, 가운데 여백' },
   none: { name: '없음', hint: '데코 이미지 없이 텍스트만' },
 };
 

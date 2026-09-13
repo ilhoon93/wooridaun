@@ -713,25 +713,55 @@ function TextLayoutSlide({
         </div>
       ) : design.variant === 'cornerFrame' ? (
         <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
-          {/* 얇은 사각 테두리 — 이미지에 굽지 않고 CSS 로 그려 어떤 화면 비율에도
-              딱 맞게(크리스프하게). currentColor + 낮은 불투명도라 라이트/다크 테마
-              모두에서 은은하게 보인다. */}
-          <div className="absolute inset-[6%] border border-current opacity-30" />
-          {/* 모서리 꽃 — 오른쪽 위 / 왼쪽 아래(대각 구성). 가장자리에 붙어 살짝
-              잘리듯(full-bleed). 크기는 컨테이너 너비 비율 + 상한으로 기기 대응. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/illustrations/text-cornerframe-tr.png"
-            alt=""
-            className="absolute right-0 top-0 w-[42%] max-w-[230px] select-none"
-            draggable={false}
+          {/* 얇은 사각 테두리 — 이미지에 굽지 않고 CSS 로 4변을 그린다(모든 비율 대응).
+              꽃이 있는 두 모서리(오른쪽 위·왼쪽 아래)에는 선을 그리지 않아 일러스트를
+              가리지 않는다(대각 오픈 프레임). 색은 테마 디자인 색(--mw-accent). */}
+          <div className="absolute left-[6%] right-[46%] top-[6%] h-px opacity-40" style={{ backgroundColor: 'var(--mw-accent, currentColor)' }} />
+          <div className="absolute bottom-[6%] right-[6%] top-[26%] w-px opacity-40" style={{ backgroundColor: 'var(--mw-accent, currentColor)' }} />
+          <div className="absolute bottom-[6%] left-[46%] right-[6%] h-px opacity-40" style={{ backgroundColor: 'var(--mw-accent, currentColor)' }} />
+          <div className="absolute left-[6%] top-[6%] bottom-[26%] w-px opacity-40" style={{ backgroundColor: 'var(--mw-accent, currentColor)' }} />
+          {/* 모서리 꽃(라인 아트) — 이미지의 알파를 마스크로 써서 라인을 테마 디자인
+              색으로 칠한다 → 디자인 색에 따라 라인 색이 바뀐다. 가장자리 full-bleed. */}
+          <div
+            className="absolute right-0 top-0 aspect-[163/129] w-[42%] max-w-[230px]"
+            style={{
+              backgroundColor: 'var(--mw-accent, currentColor)',
+              WebkitMaskImage: 'url(/illustrations/text-cornerframe-tr.png)',
+              maskImage: 'url(/illustrations/text-cornerframe-tr.png)',
+              WebkitMaskSize: 'contain',
+              maskSize: 'contain',
+              WebkitMaskRepeat: 'no-repeat',
+              maskRepeat: 'no-repeat',
+              WebkitMaskPosition: 'top right',
+              maskPosition: 'top right',
+            }}
           />
+          <div
+            className="absolute bottom-0 left-0 aspect-[166/132] w-[42%] max-w-[230px]"
+            style={{
+              backgroundColor: 'var(--mw-accent, currentColor)',
+              WebkitMaskImage: 'url(/illustrations/text-cornerframe-bl.png)',
+              maskImage: 'url(/illustrations/text-cornerframe-bl.png)',
+              WebkitMaskSize: 'contain',
+              maskSize: 'contain',
+              WebkitMaskRepeat: 'no-repeat',
+              maskRepeat: 'no-repeat',
+              WebkitMaskPosition: 'bottom left',
+              maskPosition: 'bottom left',
+            }}
+          />
+        </div>
+      ) : design.variant === 'archFloral' ? (
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
+          {/* 상단 아치형 수채화 꽃 한 장 — 상단 가장자리 앵커 + 가로 100% + 높이 자동.
+              어떤 비율에서도 꽃(상단부)은 잘리지 않고 아래 여백만 늘었다 줄었다 한다. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/illustrations/text-cornerframe-bl.png"
+            src="/illustrations/text-archfloral.png"
             alt=""
-            className="absolute bottom-0 left-0 w-[42%] max-w-[230px] select-none"
+            className="absolute inset-x-0 top-0 w-full select-none"
             draggable={false}
+            style={{ filter: 'var(--mw-illust-filter, none)' }}
           />
         </div>
       ) : design.variant !== 'none' ? (
