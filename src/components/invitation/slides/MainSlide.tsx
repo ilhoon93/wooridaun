@@ -685,11 +685,33 @@ function TextLayoutSlide({
     // 통일 레이아웃 — 데코 일러스트(꽃/편지/없음) 중앙, 텍스트는 PositionedBox 로
     // 자유 떠다님. variant === 'none' 이면 데코 안 그림.
     <section className="relative h-full min-h-full w-full overflow-hidden text-center">
-      {/* 데코 일러스트 — 슬라이드 정중앙. variant 'none' 면 skip.
-          flower 는 채색 안 된 라인 스케치 → 다크 테마에서 invert 가 필요해
-          --mw-sketch-filter 를 쓰고, letter 는 풀컬러 일러스트라 기존 글로우만
-          더하는 --mw-illust-filter 그대로. */}
-      {design.variant !== 'none' && (
+      {/* 데코 일러스트.
+          - borderFloral: 상·하단 가장자리에 수채화 꽃 띠를 각각 붙이고 가운데는 비운다.
+            두 띠 모두 가로 100% + 높이 자동이라 어떤 화면 비율에서도 잘리지 않고,
+            비율이 바뀌면 가운데 빈 공간만 늘었다 줄었다 한다(좌우 full-bleed).
+          - flower: 채색 안 된 라인 스케치 → 다크 테마 invert(--mw-sketch-filter).
+          - letter/borderFloral: 풀컬러 → 기존 글로우(--mw-illust-filter).
+          - none: 데코 없음. */}
+      {design.variant === 'borderFloral' ? (
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/illustrations/text-borderfloral-top.png"
+            alt=""
+            className="absolute inset-x-0 top-0 w-full select-none"
+            draggable={false}
+            style={{ filter: 'var(--mw-illust-filter, none)' }}
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/illustrations/text-borderfloral-bottom.png"
+            alt=""
+            className="absolute inset-x-0 bottom-0 w-full select-none"
+            draggable={false}
+            style={{ filter: 'var(--mw-illust-filter, none)' }}
+          />
+        </div>
+      ) : design.variant !== 'none' ? (
         <div className="absolute inset-0 z-0 flex items-center justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -706,7 +728,7 @@ function TextLayoutSlide({
             }}
           />
         </div>
-      )}
+      ) : null}
 
       {/* 제목 */}
       <PositionedBox position={design.title.position}>
