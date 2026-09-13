@@ -753,13 +753,14 @@ function TextLayoutSlide({
         </div>
       ) : design.variant === 'archFloral' ? (
         <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
-          {/* 상단 아치형 수채화 꽃 한 장 — 상단 가장자리 앵커 + 가로 100% + 높이 자동.
-              어떤 비율에서도 꽃(상단부)은 잘리지 않고 아래 여백만 늘었다 줄었다 한다. */}
+          {/* 아치형 수채화 꽃 한 장 — 하단 가장자리 앵커 + 가로 100% + 높이 자동.
+              아래로 딱 붙어 가로를 꽉 채우고, 남는 위쪽은 여백으로 둔다. 어떤 비율에서도
+              꽃은 잘리지 않고 위 여백만 늘었다 줄었다 한다. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/illustrations/text-archfloral.png"
             alt=""
-            className="absolute inset-x-0 top-0 w-full select-none"
+            className="absolute inset-x-0 bottom-0 w-full select-none"
             draggable={false}
             style={{ filter: 'var(--mw-illust-filter, none)' }}
           />
