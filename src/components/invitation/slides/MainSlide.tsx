@@ -711,6 +711,29 @@ function TextLayoutSlide({
             style={{ filter: 'var(--mw-illust-filter, none)' }}
           />
         </div>
+      ) : design.variant === 'cornerFrame' ? (
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
+          {/* 얇은 사각 테두리 — 이미지에 굽지 않고 CSS 로 그려 어떤 화면 비율에도
+              딱 맞게(크리스프하게). currentColor + 낮은 불투명도라 라이트/다크 테마
+              모두에서 은은하게 보인다. */}
+          <div className="absolute inset-[6%] border border-current opacity-30" />
+          {/* 모서리 꽃 — 오른쪽 위 / 왼쪽 아래(대각 구성). 가장자리에 붙어 살짝
+              잘리듯(full-bleed). 크기는 컨테이너 너비 비율 + 상한으로 기기 대응. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/illustrations/text-cornerframe-tr.png"
+            alt=""
+            className="absolute right-0 top-0 w-[42%] max-w-[230px] select-none"
+            draggable={false}
+          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/illustrations/text-cornerframe-bl.png"
+            alt=""
+            className="absolute bottom-0 left-0 w-[42%] max-w-[230px] select-none"
+            draggable={false}
+          />
+        </div>
       ) : design.variant !== 'none' ? (
         <div className="absolute inset-0 z-0 flex items-center justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
