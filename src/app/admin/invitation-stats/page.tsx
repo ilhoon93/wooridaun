@@ -144,6 +144,64 @@ export default async function InvitationStatsAdminPage() {
     count: sectionCounts.get(key) ?? 0,
   }));
 
+  // ── 3. 참여(engagement) 집계 — 전체 알림장 누적 ──────────────────
+  // 하객/소장용 방문(guest_visits), 방명록(guestbook_messages), 서명(signatures),
+  // 축하하기(invitation_cheers.cheers_count 합), 사진 좋아요(gallery_likes.like_count 합).
+  // 방문/방명록/서명은 head count 로 행 전송 없이 세고, 축하·좋아요는 합계라 값만 읽어 합산.
+  let engagement: {
+    guestVisits: number;
+    ownerVisits: number;
+    guestbook: number;
+    signatures: number;
+    cheers: number;
+    galleryLikes: number;
+  } | null = null;
+  let engagementError: string | null = null;
+  try {
+    // viewer_role(마이그 076)은 자동생성 타입에 없어 owner 필터만 느슨히 캐스팅.
+    const ownerVisitsQuery = (
+      sb.from('guest_visits') as unknown as {
+        select: (
+          cols: string,
+          opts: { count: 'exact'; head: true },
+        ) => { eq: (c: string, v: string) => Promise<{ count: number | null }> };
+      }
+    )
+      .select('*', { count: 'exact', head: true })
+      .eq('viewer_role', 'owner');
+
+    const [totalVisitsRes, ownerVisitsRes, gbRes, sigRes, cheersRes, likesRes] =
+      await Promise.all([
+        sb.from('guest_visits').select('*', { count: 'exact', head: true }),
+        ownerVisitsQuery,
+        sb.from('guestbook_messages').select('*', { count: 'exact', head: true }),
+        sb.from('signatures').select('*', { count: 'exact', head: true }),
+        sb.from('invitation_cheers').select('cheers_count'),
+        sb.from('gallery_likes').select('like_count'),
+      ]);
+
+    const totalVisits = totalVisitsRes.count ?? 0;
+    const ownerVisits = ownerVisitsRes.count ?? 0;
+    const cheers = (
+      (cheersRes.data ?? []) as { cheers_count: number | null }[]
+    ).reduce((s, r) => s + (r.cheers_count ?? 0), 0);
+    const galleryLikes = (
+      (likesRes.data ?? []) as { like_count: number | null }[]
+    ).reduce((s, r) => s + (r.like_count ?? 0), 0);
+
+    engagement = {
+      guestVisits: Math.max(0, totalVisits - ownerVisits),
+      ownerVisits,
+      guestbook: gbRes.count ?? 0,
+      signatures: sigRes.count ?? 0,
+      cheers,
+      galleryLikes,
+    };
+  } catch (e) {
+    engagementError = e instanceof Error ? e.message : String(e);
+    console.error('[admin/invitation-stats] engagement aggregate failed', e);
+  }
+
   return (
     <main className="mx-auto max-w-4xl px-4 pb-24 pt-6 sm:px-6">
       <header className="mb-5">
@@ -235,6 +293,64 @@ export default async function InvitationStatsAdminPage() {
         />
         <StatCard label="발행된 알림장" value={stats?.published_count ?? 0} small unit="건" />
         <StatCard label="영구소장 적용" value={stats?.archived_count ?? 0} small unit="건" />
+      </section>
+
+      {/* ── 참여(engagement) 지표 — 전체 알림장 누적 ─────────── */}
+      <section className="mt-8">
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold text-[#3D2E1F]">방문·참여 지표</h2>
+          <span className="text-[11px] text-[#8B7355]">전체 알림장 누적</span>
+        </div>
+        {engagementError ? (
+          <p className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+            참여 지표 집계 실패: {engagementError}
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <StatCard
+              label="하객용 방문"
+              value={engagement?.guestVisits ?? 0}
+              small
+              unit="회"
+              hint="하객용 페이지 방문 세션 수"
+            />
+            <StatCard
+              label="소장용 방문"
+              value={engagement?.ownerVisits ?? 0}
+              small
+              unit="회"
+              hint="소장용(신랑·신부) 방문 세션 수"
+            />
+            <StatCard
+              label="축하하기"
+              value={engagement?.cheers ?? 0}
+              small
+              unit="회"
+              hint="메인 축하하기 버튼 누적 클릭"
+            />
+            <StatCard
+              label="방명록"
+              value={engagement?.guestbook ?? 0}
+              small
+              unit="개"
+              hint="하객이 남긴 방명록 글"
+            />
+            <StatCard
+              label="방명록 서명"
+              value={engagement?.signatures ?? 0}
+              small
+              unit="개"
+              hint="하객 서명 참여"
+            />
+            <StatCard
+              label="사진 좋아요"
+              value={engagement?.galleryLikes ?? 0}
+              small
+              unit="개"
+              hint="갤러리 사진 좋아요 누적"
+            />
+          </div>
+        )}
       </section>
 
       {/* ── 발행 알림장 디자인 분포 ─────────────────────── */}
