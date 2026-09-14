@@ -64,7 +64,10 @@ export interface DesignConfig {
   bgm?: { enabled: boolean; url: string };
   /** 혼주용 큰 글씨 모드 (선택, 기본 false) — content.theme.hostMode 에 반영. */
   hostMode?: boolean;
-  /** 슬라이드 전환 효과 (선택, 기본 false) — content.theme.slideAnimation 에 반영. */
+  /**
+   * 슬라이드 전환 효과 설정값(선택). 현재 buildDesign 은 모든 샘플에 대해
+   * 전환 효과를 항상 켜므로(요청) 이 값은 렌더에 영향을 주지 않는다.
+   */
   slideAnimation?: boolean;
   /**
    * 고유 번호 — 한 번 부여되면 순서를 바꿔도 유지되는 영구 번호(고객이 "N번 디자인"
@@ -345,7 +348,9 @@ export function buildDesign(
   content.theme.petalType = c.petalType;
   content.theme.font = c.font;
   content.theme.hostMode = c.hostMode ?? false;
-  content.theme.slideAnimation = c.slideAnimation ?? false;
+  // 모든 알림장 샘플은 슬라이드 전환 효과를 켠 상태로 보여준다(요청).
+  // per-sample 설정(DB/기본값)과 무관하게 항상 on — 샘플 전체 톤을 통일.
+  content.theme.slideAnimation = true;
   // 샘플 배경음악 — 운영자가 켜고 URL 을 넣었을 때만 적용.
   if (c.bgm?.enabled && c.bgm.url.trim()) {
     content.theme.bgm = { enabled: true, url: c.bgm.url.trim() };
@@ -575,7 +580,7 @@ export function createBlankSampleDesign(
     heroImageId: 'studio-floral-pastel',
     main,
     hostMode: false,
-    slideAnimation: false,
+    slideAnimation: true,
   };
 }
 
