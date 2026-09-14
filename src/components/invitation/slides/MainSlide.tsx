@@ -765,6 +765,19 @@ function TextLayoutSlide({
             style={{ filter: 'var(--mw-illust-filter, none)' }}
           />
         </div>
+      ) : design.variant === 'ribbonFrame' ? (
+        <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
+          {/* 리본 사각 테두리 한 장 — 전체를 잘림 없이 중앙에 맞춰 넣는다(object-contain).
+              단색 라인 아트라 다크 테마에서는 --mw-sketch-filter 로 밝게 반전. 가운데 여백. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/illustrations/text-ribbonframe.png"
+            alt=""
+            className="absolute inset-0 h-full w-full select-none object-contain"
+            draggable={false}
+            style={{ filter: 'var(--mw-sketch-filter, none)' }}
+          />
+        </div>
       ) : design.variant !== 'none' ? (
         <div className="absolute inset-0 z-0 flex items-center justify-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}

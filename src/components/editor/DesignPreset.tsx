@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useEditorStore } from '@/stores/editor';
+import { THEME_PALETTES } from '@/lib/theme';
 import type { EditorSampleDesign } from '@/lib/editor/design-presets';
 import { InvitationPreview } from '@/components/marketing/InvitationPreview';
 
@@ -148,8 +149,13 @@ export function DesignPreset({
           active ? 'border-primary ring-1 ring-primary' : 'border-input hover:border-primary/50'
         }`}
       >
-        {/* 실제 표지 미리보기(정적) 썸네일 — 표지 안엔 번호를 얹지 않는다. */}
-        <div className="wd-static-preview relative aspect-[1/2] w-full overflow-hidden bg-[#15110E]">
+        {/* 실제 표지 미리보기(정적) 썸네일 — 표지 안엔 번호를 얹지 않는다.
+            배경을 그 디자인의 테마 배경색으로 깔아, 미리보기가 그려지기 전 "잠깐
+            검은 화면"이 뜨지 않게 한다(예전 검은 프레임 배경 제거). */}
+        <div
+          className="wd-static-preview relative aspect-[1/2] w-full overflow-hidden"
+          style={{ backgroundColor: THEME_PALETTES[d.colorTheme]?.bg ?? '#f5f5f5' }}
+        >
           <InvitationPreview design={d.preview} cover staticPreview />
           {active && (
             <span className="pointer-events-none absolute right-1.5 top-1.5 z-10 rounded-full bg-primary px-1.5 py-0.5 text-[9px] font-semibold text-primary-foreground">
@@ -198,21 +204,12 @@ export function DesignPreset({
           등록된 디자인이 없습니다.
         </p>
       ) : (
-        // 두 그룹을 모두 마운트해 두고 탭에 따라 hidden 으로만 전환한다 —
-        // 탭 전환 때 썸네일이 리마운트되며 scale=0(검은 프레임)부터 다시
-        // 페이드인하는 "잠깐 검은 화면" 깜빡임을 없앤다(한 번만 그려짐).
-        <>
-          {photo.length > 0 && (
-            <div className={`mt-2 grid-cols-2 gap-2.5 lg:grid-cols-4 ${view === 'photo' ? 'grid' : 'hidden'}`}>
-              {photo.map(renderCard)}
-            </div>
-          )}
-          {nophoto.length > 0 && (
-            <div className={`mt-2 grid-cols-2 gap-2.5 lg:grid-cols-4 ${view === 'nophoto' ? 'grid' : 'hidden'}`}>
-              {nophoto.map(renderCard)}
-            </div>
-          )}
-        </>
+        // 활성 탭의 썸네일만 렌더 → 에디터 열 때 한 번에 그리는 수를 줄여 가볍게.
+        // 배경을 각 디자인의 테마색으로 깔아, 미리보기가 그려지기 전에도 검은 화면이
+        // 뜨지 않는다(리마운트/탭 전환 시에도 동일).
+        <div className="mt-2 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+          {(view === 'photo' ? photo : nophoto).map(renderCard)}
+        </div>
       )}
       {usesSamplePhoto && (
         <p className="mt-2 rounded-md bg-amber-50 px-2.5 py-1.5 text-[11px] leading-tight text-amber-900 ring-1 ring-amber-200">
