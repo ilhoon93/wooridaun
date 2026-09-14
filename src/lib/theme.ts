@@ -16,7 +16,7 @@ export const COLOR_THEMES = [
   'letterPaper', // 편지지 — 흰 바탕 + 검정 글자
   'champagne',   // 샴페인 — 웜 아이보리 + 와인 글자
   'butter',      // 버터 — 연노랑 크림 + 앰버 골드
-  'rosePearl',   // 로즈펄 — 펄/샴페인 느낌의 연핑크
+  'rosePearl',   // 핫핑크 — 연한 핫핑크 바탕 + 진한 빨강 글자 (key 는 호환 위해 유지)
   'powder',      // 파우더블루 — 연한 파랑
   'rose',        // 더스티 로즈 — 핑크 바탕 + 모카 글자 (로맨틱)
   'forest',      // 포레스트 — 아이보리 + 딥 그린 (보태니컬)
@@ -199,14 +199,14 @@ export const THEME_PALETTES: Record<ColorTheme, Palette> = {
     dot: '#EAD9A0',
     petals: ['#FBEBB4', '#EAD9A0', '#FFF8E0', '#DCC066'],
   },
-  // 로즈펄 — 진주빛 광택(펄 패턴) 위에 은은한 연핑크 + 모브 브라운 글자.
-  // 샴페인/펄 같은 고급스러운 핑크 톤.
+  // 로즈펄 — 진주빛 광택 위에 연한 핫핑크 바탕 + 진한 빨강(크림슨) 글자.
+  // 화사하고 사랑스러운 핑크 톤.
   rosePearl: {
-    bg: '#FBEBE6',
-    fg: '#6B4A46',
-    accent: '#C99A8E',
-    dot: '#EBD3CC',
-    petals: ['#F6DDD6', '#EBD3CC', '#FFF3EE', '#D8B0A6'],
+    bg: '#FCE1EC',
+    fg: '#9E1B34',
+    accent: '#DB5C86',
+    dot: '#F3C4D6',
+    petals: ['#FAD4E1', '#F3C4D6', '#FFF0F5', '#E58BAD'],
     bgPattern: ROSE_PEARL_PATTERN,
   },
   // 파우더블루 — 맑고 옅은 파랑 바탕 + 딥 블루 글자 + 소프트 블루 포인트.
@@ -270,7 +270,7 @@ export const COLOR_THEME_LABELS: Record<ColorTheme, string> = {
   midnight: '미드나잇',
   champagne: '샴페인',
   butter: '버터',
-  rosePearl: '로즈펄',
+  rosePearl: '핫핑크',
   powder: '파우더블루',
   rose: '로즈',
   forest: '포레스트',

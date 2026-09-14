@@ -768,14 +768,22 @@ function TextLayoutSlide({
       ) : design.variant === 'ribbonFrame' ? (
         <div aria-hidden className="pointer-events-none absolute inset-0 z-0">
           {/* 리본 사각 테두리 한 장 — 전체를 잘림 없이 중앙에 맞춰 넣는다(contain).
-              단색 라인 아트를 CSS mask 로 재색(alpha 유지)해 디자인 글씨색(currentColor)에
-              맞춘다 — 테마 텍스트와 같은 색의 리본. 가운데 여백. */}
+              (1) 원본 이미지를 그대로 깔아 가운데 흰색 네모박스는 흰색으로 유지하고,
+              (2) 그 위에 리본 라인만 담은 mask 를 currentColor(디자인 글씨색)로 덧칠해
+                  리본 프레임 색만 테마 글씨색에 맞춘다. 흰 여백은 건드리지 않음. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/illustrations/text-ribbonframe.png"
+            alt=""
+            className="absolute inset-0 h-full w-full select-none object-contain"
+            draggable={false}
+          />
           <div
             className="absolute inset-0 h-full w-full"
             style={{
               backgroundColor: 'currentColor',
-              WebkitMaskImage: 'url(/illustrations/text-ribbonframe.png)',
-              maskImage: 'url(/illustrations/text-ribbonframe.png)',
+              WebkitMaskImage: 'url(/illustrations/text-ribbonframe-line.png)',
+              maskImage: 'url(/illustrations/text-ribbonframe-line.png)',
               WebkitMaskSize: 'contain',
               maskSize: 'contain',
               WebkitMaskRepeat: 'no-repeat',
