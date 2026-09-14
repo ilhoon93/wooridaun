@@ -46,7 +46,7 @@ const LAYOUT_LABELS: Record<LayoutPickerKey, { name: string; hint: string }> = {
   poster: { name: '포스터', hint: '풀이미지 배경' },
   frame: { name: '액자프레임', hint: '폴라로이드 · 하트 · 스크린' },
   illustration: { name: '일러스트', hint: '신랑신부 그림' },
-  text: { name: '텍스트', hint: '이미지 없이' },
+  text: { name: '텍스트', hint: '텍스트 중심 · 꽃/프레임 데코' },
 };
 
 // 액자프레임 분기 — 'frame' 또는 구버전 'polaroid' 둘 다 같은 컨트롤로 처리.
@@ -789,6 +789,7 @@ const TEXT_VARIANT_LABELS: Record<TextVariant, { name: string; hint: string }> =
   borderFloral: { name: '수채화 플로럴', hint: '위·아래 수채화 꽃, 가운데 여백' },
   cornerFrame: { name: '라인 프레임', hint: '얇은 사각 테두리 + 모서리 라인 꽃' },
   archFloral: { name: '수채화 아치', hint: '상단 아치형 수채화 꽃, 가운데 여백' },
+  ribbonFrame: { name: '리본 프레임', hint: '리본 사각 테두리, 가운데 여백' },
   none: { name: '없음', hint: '데코 이미지 없이 텍스트만' },
 };
 
