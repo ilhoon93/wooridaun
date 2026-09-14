@@ -19,16 +19,21 @@ import {
   DEFAULT_TITLE_FONT_KO,
   getDisplayFontSize,
   DARK_SUBTEXT_COLOR,
+  LIGHT_SUBTEXT_COLOR,
   type TitleFontKey,
 } from '@/lib/theme';
 
 /**
- * 다크 배경 테마에서 "이름·날짜·인사말만 어둡게"(main.darkSubText) 옵션이 켜졌을 때
- * 해당 텍스트에 줄 색. 꺼져 있으면 undefined 를 반환해 inline color 를 생략 →
- * 테마 글씨색(currentColor)을 그대로 상속한다. 제목에는 적용하지 않는다.
+ * 이름·날짜·인사말(제목 제외)에 줄 색.
+ *  - darkSubText: 다크 배경 테마에서 어둡게(먹빛)
+ *  - lightSubText: 밝은 배경 테마에서 밝게(흰색)
+ * 둘 다 꺼져 있으면 undefined 를 반환해 inline color 를 생략 → 테마 글씨색
+ * (currentColor)을 그대로 상속한다. 둘 다 켜진 경우(테마 전환 등)는 darkSubText 우선.
  */
 function subTextColor(main: InvitationContent['main']): string | undefined {
-  return main.darkSubText ? DARK_SUBTEXT_COLOR : undefined;
+  if (main.darkSubText) return DARK_SUBTEXT_COLOR;
+  if (main.lightSubText) return LIGHT_SUBTEXT_COLOR;
+  return undefined;
 }
 import { Confetti } from '@/components/shared/Confetti';
 import { HeartClip } from '@/components/shared/HeartClip';

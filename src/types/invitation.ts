@@ -452,6 +452,12 @@ export const MainSectionSchema = z.preprocess(
        * 확보하기 위한 옵션. 기본 false = 기존 동작(테마 글씨색 그대로).
        */
       darkSubText: z.boolean().default(false),
+      /**
+       * 밝은(라이트) 배경 테마에서 이름·날짜·인사말(제목 제외)만 밝은(흰) 색으로.
+       * darkSubText 의 반대 — 어두운 사진/요소 위에 텍스트가 놓일 때 가독성 확보용.
+       * 기본 false. darkSubText 와 함께 켜지면 darkSubText 가 우선.
+       */
+      lightSubText: z.boolean().default(false),
       /** Free AI generation is one-shot; flips true after a successful run. */
       aiUsed: z.boolean().default(false),
       posterDesign: PosterDesignSchema,
@@ -463,6 +469,7 @@ export const MainSectionSchema = z.preprocess(
       layout: 'poster',
       greeting: '',
       darkSubText: false,
+      lightSubText: false,
       aiUsed: false,
       posterDesign: PosterDesignSchema.parse(undefined),
       illustrationDesign: IllustrationDesignSchema.parse(undefined),
