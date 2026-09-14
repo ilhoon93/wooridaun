@@ -51,6 +51,43 @@ export default async function AdminInvitationsPage({ searchParams }: PageProps) 
     const raw = (Array.isArray(data) ? data : []) as InvitationRow[];
     hasMore = raw.length > PAGE_SIZE;
     rows = raw.slice(0, PAGE_SIZE);
+
+    // 하객용(guest)/소장용(owner) 방문 세션 수 집계 — 이 페이지에 보이는
+    // 알림장들만 guest_visits 에서 조회해 role 별로 센다. (VisitTracker 가
+    // 세션당 role 별 1행씩 기록하므로 행 수 ≈ 방문자 수.)
+    const ids = rows.map((r) => r.id);
+    if (ids.length > 0) {
+      // viewer_role 컬럼은 마이그 076 — 자동생성 타입에 아직 없어 느슨히 캐스팅.
+      const { data: visits, error: vErr } = await (
+        sb.from('guest_visits') as unknown as {
+          select: (cols: string) => {
+            in: (
+              col: string,
+              vals: string[],
+            ) => Promise<{
+              data: { invitation_id: string; viewer_role: string | null }[] | null;
+              error: { message: string } | null;
+            }>;
+          };
+        }
+      )
+        .select('invitation_id, viewer_role')
+        .in('invitation_id', ids);
+      if (!vErr && Array.isArray(visits)) {
+        const counts = new Map<string, { guest: number; owner: number }>();
+        for (const v of visits) {
+          const c = counts.get(v.invitation_id) ?? { guest: 0, owner: 0 };
+          if (v.viewer_role === 'owner') c.owner += 1;
+          else c.guest += 1;
+          counts.set(v.invitation_id, c);
+        }
+        rows = rows.map((r) => ({
+          ...r,
+          guestVisits: counts.get(r.id)?.guest ?? 0,
+          ownerVisits: counts.get(r.id)?.owner ?? 0,
+        }));
+      }
+    }
   } catch (e) {
     errorMsg = e instanceof Error ? e.message : String(e);
     console.error('[admin/invitations] load failed', e);

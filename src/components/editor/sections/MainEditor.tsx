@@ -91,8 +91,9 @@ export function MainEditor({ drag }: { drag?: SectionDragProps }) {
   const patch = useEditorStore((s) => s.patchSection);
   if (!main || !invitationId) return null;
 
-  // 다크 배경 테마에서만 "이름·날짜·인사말 어둡게" 옵션 노출.
+  // 다크 배경 테마 → "어둡게" 옵션, 밝은 배경 테마 → "밝게" 옵션 노출.
   const isDarkTheme = !!colorTheme && isDarkColorTheme(colorTheme);
+  const isLightTheme = !!colorTheme && !isDarkTheme;
 
   const layout = main.layout ?? 'poster';
   const showImagePicker = layout !== 'text' && layout !== 'illustration';
@@ -207,15 +208,32 @@ export function MainEditor({ drag }: { drag?: SectionDragProps }) {
         </div>
 
         {/* 다크 배경 테마 전용 — 이름·날짜·인사말(제목 제외)만 어둡게.
-            리본 프레임의 흰 여백처럼 밝은 요소 위에 글씨가 놓일 때 가독성 확보용.
-            라이트 테마에서는 노출하지 않는다(무의미). */}
+            리본 프레임의 흰 여백처럼 밝은 요소 위에 글씨가 놓일 때 가독성 확보용. */}
         {isDarkTheme && (
           <div className="rounded-md border border-input bg-muted/20 px-3 py-2">
             <ToggleRow
               label="이름·날짜·인사말 어둡게"
               hint="다크 배경용 — 제목은 그대로 두고 이름·날짜·인사말 글씨만 어두운 색으로."
               checked={!!main.darkSubText}
-              onChange={(v) => patch('main', { ...main, darkSubText: v })}
+              // 반대 옵션(밝게)과 동시에 켜지지 않도록 상호 배타 처리.
+              onChange={(v) =>
+                patch('main', { ...main, darkSubText: v, lightSubText: v ? false : main.lightSubText })
+              }
+            />
+          </div>
+        )}
+
+        {/* 밝은(라이트) 배경 테마 전용 — 이름·날짜·인사말(제목 제외)만 밝게(흰색).
+            어두운 사진/요소 위에 글씨가 놓일 때 가독성 확보용. */}
+        {isLightTheme && (
+          <div className="rounded-md border border-input bg-muted/20 px-3 py-2">
+            <ToggleRow
+              label="이름·날짜·인사말 밝게"
+              hint="밝은 배경용 — 제목은 그대로 두고 이름·날짜·인사말 글씨만 흰색으로."
+              checked={!!main.lightSubText}
+              onChange={(v) =>
+                patch('main', { ...main, lightSubText: v, darkSubText: v ? false : main.darkSubText })
+              }
             />
           </div>
         )}

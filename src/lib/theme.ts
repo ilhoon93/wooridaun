@@ -287,6 +287,10 @@ export const isDarkColorTheme = (t: ColorTheme): boolean =>
 // 다크 테마에서 이름·날짜·인사말만 어둡게 바꿀 때 쓰는 글씨색(따뜻한 먹빛).
 export const DARK_SUBTEXT_COLOR = '#2A2320';
 
+// 밝은(라이트) 배경 테마에서 이름·날짜·인사말만 밝게 바꿀 때 쓰는 글씨색(흰색).
+// 밝은 사진/데코 위가 아니라 어두운 요소 위에 텍스트가 놓일 때 가독성 확보용.
+export const LIGHT_SUBTEXT_COLOR = '#FFFFFF';
+
 // 'flower'/'heart'/'star'/'snow' 는 글리프(이모지/문자) 효과,
 // 'sakura'/'leaf'/'whitePetal' 은 SVG 텍스처. 'bokeh'/'starlight' 은
 // "떨어지는" 효과가 아니라 화면 위에서 페이드되는 별도 분기.

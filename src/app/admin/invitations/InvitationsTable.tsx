@@ -33,6 +33,10 @@ export interface InvitationRow {
   archived: boolean | null;
   /** 수정(제작) 여부 — updated_at<>created_at 또는 편집 흔적 존재. 070 마이그 이전이면 null. */
   was_made: boolean | null;
+  /** 하객용 방문 세션 수(집계). page.tsx 에서 guest_visits 로 채운다. */
+  guestVisits?: number;
+  /** 소장용 방문 세션 수(집계). */
+  ownerVisits?: number;
 }
 
 function statusOf(r: InvitationRow): {
@@ -66,6 +70,8 @@ export function InvitationsTable({
 }) {
   const router = useRouter();
   const [emailInput, setEmailInput] = useState(email);
+  // 미리보기 모달 — 클릭한 알림장의 id/라벨을 담아 iframe 으로 인라인 표시.
+  const [preview, setPreview] = useState<{ id: string; label: string } | null>(null);
 
   const go = (nextEmail: string, nextPublished: boolean, nextPage: number) => {
     const params = new URLSearchParams();
@@ -127,12 +133,11 @@ export function InvitationsTable({
         <table className="w-full min-w-[820px] border-collapse text-sm">
           <thead>
             <tr className="bg-[#FAF7F2] text-[11px] text-[#8B7355]">
-              <th className="px-3 py-2 text-left font-medium">생성일시</th>
-              <th className="px-3 py-2 text-left font-medium">최종 수정</th>
+              <th className="px-3 py-2 text-left font-medium">최종 수정 / 생성일시</th>
               <th className="px-3 py-2 text-left font-medium">이메일</th>
               <th className="px-3 py-2 text-left font-medium">신랑 · 신부</th>
               <th className="px-3 py-2 text-left font-medium">예식일</th>
-              <th className="px-2 py-2 text-center font-medium">수정 여부</th>
+              <th className="px-2 py-2 text-center font-medium">미리보기</th>
               <th className="px-2 py-2 text-center font-medium">상태</th>
               <th className="px-3 py-2 text-left font-medium">보기</th>
             </tr>
@@ -142,11 +147,16 @@ export function InvitationsTable({
               const st = statusOf(r);
               return (
                 <tr key={r.id} className="border-t border-[#E8DCC9]">
+                  {/* 최종 수정(위, 강조) / 생성일시(아래, 옅게) 한 열에 위아래로. */}
                   <td className="whitespace-nowrap px-3 py-2 text-[11px] text-[#5C4633]">
-                    {formatKstDateTime(r.created_at)}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-[11px] text-[#5C4633]">
-                    {formatKstDateTime(r.updated_at)}
+                    <div className="flex flex-col leading-tight">
+                      <span className="font-medium text-[#3D2E1F]">
+                        {formatKstDateTime(r.updated_at)}
+                      </span>
+                      <span className="mt-0.5 text-[10px] text-[#B0A088]">
+                        생성 {formatKstDateTime(r.created_at)}
+                      </span>
+                    </div>
                   </td>
                   <td className="px-3 py-2 text-[12px] text-[#3D2E1F]">
                     {r.email ?? (
@@ -159,18 +169,28 @@ export function InvitationsTable({
                   <td className="whitespace-nowrap px-3 py-2 text-[12px] text-[#5C4633]">
                     {r.wedding_date ?? '-'}
                   </td>
+                  {/* 미리보기 — 수정됨/미수정 배지를 그대로 두되 버튼으로 만들어,
+                      누르면 인라인 모달로 운영자 미리보기를 띄운다. */}
                   <td className="px-2 py-2 text-center">
-                    {r.was_made == null ? (
-                      <span className="text-[10px] text-[#B0A088]">-</span>
-                    ) : r.was_made ? (
-                      <span className="inline-block rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700 ring-1 ring-sky-200">
-                        수정됨
-                      </span>
-                    ) : (
-                      <span className="inline-block rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-500 ring-1 ring-stone-200">
-                        미수정
-                      </span>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPreview({
+                          id: r.id,
+                          label: `${r.groom_name || '-'} · ${r.bride_name || '-'}`,
+                        })
+                      }
+                      title="미리보기 열기"
+                      className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 transition-opacity hover:opacity-80 ${
+                        r.was_made == null
+                          ? 'bg-stone-50 text-stone-500 ring-stone-200'
+                          : r.was_made
+                            ? 'bg-sky-50 text-sky-700 ring-sky-200'
+                            : 'bg-stone-100 text-stone-500 ring-stone-200'
+                      }`}
+                    >
+                      {r.was_made == null ? '미리보기' : r.was_made ? '수정됨' : '미수정'}
+                    </button>
                   </td>
                   <td className="px-2 py-2 text-center">
                     <span
@@ -191,24 +211,40 @@ export function InvitationsTable({
                         미리보기 ↗
                       </a>
                       {r.is_published && r.pub_slug && (
-                        <a
-                          href={`/${r.pub_slug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[11px] text-[#8B7355] hover:text-[#5C4633]"
-                        >
-                          하객용 ↗
-                        </a>
+                        <span className="inline-flex items-center gap-1.5">
+                          <a
+                            href={`/${r.pub_slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11px] text-[#8B7355] hover:text-[#5C4633]"
+                          >
+                            하객용 ↗
+                          </a>
+                          <span
+                            title="하객용 방문 세션 수"
+                            className="rounded-full bg-[#F1E9DC] px-1.5 py-0.5 text-[10px] font-medium text-[#8B7355]"
+                          >
+                            {(r.guestVisits ?? 0).toLocaleString()}
+                          </span>
+                        </span>
                       )}
                       {r.is_published && r.pub_slug && r.owner_token && (
-                        <a
-                          href={`/${r.pub_slug}/o/${r.owner_token}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[11px] text-[#8B7355] hover:text-[#5C4633]"
-                        >
-                          소장용 ↗
-                        </a>
+                        <span className="inline-flex items-center gap-1.5">
+                          <a
+                            href={`/${r.pub_slug}/o/${r.owner_token}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[11px] text-[#8B7355] hover:text-[#5C4633]"
+                          >
+                            소장용 ↗
+                          </a>
+                          <span
+                            title="소장용 방문 세션 수"
+                            className="rounded-full bg-[#F1E9DC] px-1.5 py-0.5 text-[10px] font-medium text-[#8B7355]"
+                          >
+                            {(r.ownerVisits ?? 0).toLocaleString()}
+                          </span>
+                        </span>
                       )}
                     </div>
                   </td>
@@ -217,7 +253,7 @@ export function InvitationsTable({
             })}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-10 text-center text-xs text-[#8B7355]">
+                <td colSpan={7} className="px-3 py-10 text-center text-xs text-[#8B7355]">
                   알림장이 없습니다.
                 </td>
               </tr>
@@ -246,6 +282,52 @@ export function InvitationsTable({
           다음 →
         </button>
       </div>
+
+      {/* 인라인 미리보기 모달 — 운영자 미리보기 페이지를 iframe 으로 띄운다.
+          배경 클릭 또는 닫기 버튼으로 닫힌다. */}
+      {preview && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setPreview(null)}
+        >
+          <div
+            className="flex max-h-[90vh] w-full max-w-[420px] flex-col overflow-hidden rounded-xl bg-white shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between gap-2 border-b border-[#E8DCC9] px-4 py-2.5">
+              <span className="truncate text-sm font-medium text-[#3D2E1F]">
+                미리보기 · {preview.label}
+              </span>
+              <div className="flex items-center gap-2">
+                <a
+                  href={`/admin/invitations/${preview.id}/preview`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-[#8B7355] underline hover:text-[#5C4633]"
+                >
+                  새 탭 ↗
+                </a>
+                <button
+                  type="button"
+                  onClick={() => setPreview(null)}
+                  aria-label="닫기"
+                  className="rounded-md px-2 py-0.5 text-lg leading-none text-[#8B7355] hover:bg-[#F1E9DC]"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <iframe
+              key={preview.id}
+              src={`/admin/invitations/${preview.id}/preview`}
+              title="알림장 미리보기"
+              className="h-[70vh] w-full flex-1 border-0 bg-[#FAF7F2]"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
