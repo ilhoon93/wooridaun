@@ -58,6 +58,11 @@ export interface Palette {
 const PEARL_PATTERN =
   'radial-gradient(circle at 30% 20%, rgba(255,230,235,0.55) 0%, rgba(255,255,255,0) 38%), radial-gradient(circle at 75% 70%, rgba(220,235,255,0.5) 0%, rgba(255,255,255,0) 40%), radial-gradient(circle at 50% 50%, rgba(255,250,240,0.35) 0%, rgba(255,255,255,0) 60%)';
 
+// 로즈펄 전용 — 펄 패턴에서 파란빛 라디얼을 걷어내고 흰색/연분홍만으로 광택을 낸다.
+// (펄 테마의 파란 진주빛과 달리, 로즈펄은 따뜻한 핑크 톤을 유지.)
+const ROSE_PEARL_PATTERN =
+  'radial-gradient(circle at 30% 20%, rgba(255,230,235,0.55) 0%, rgba(255,255,255,0) 38%), radial-gradient(circle at 75% 70%, rgba(255,245,248,0.6) 0%, rgba(255,255,255,0) 40%), radial-gradient(circle at 50% 50%, rgba(255,250,245,0.35) 0%, rgba(255,255,255,0) 60%)';
+
 // 편지지는 패턴 없이 평면 흰 바탕만 사용 — 모바일 환경에서 화면 밝기에
 // 따라 광택 얼룩이 회색으로 비치는 문제가 있어 BG_PATTERN 을 따로 두지 않는다.
 
@@ -202,7 +207,7 @@ export const THEME_PALETTES: Record<ColorTheme, Palette> = {
     accent: '#C99A8E',
     dot: '#EBD3CC',
     petals: ['#F6DDD6', '#EBD3CC', '#FFF3EE', '#D8B0A6'],
-    bgPattern: PEARL_PATTERN,
+    bgPattern: ROSE_PEARL_PATTERN,
   },
   // 파우더블루 — 맑고 옅은 파랑 바탕 + 딥 블루 글자 + 소프트 블루 포인트.
   // 시원하고 청량한 톤. 하늘(sky)보다 더 연하고 파스텔에 가깝다.

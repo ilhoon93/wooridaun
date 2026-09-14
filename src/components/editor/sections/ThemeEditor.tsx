@@ -40,8 +40,9 @@ export function ThemeEditor() {
   return (
     <SectionEditor title="디자인" description="색상, 효과, 폰트" defaultOpen>
       <div className="flex flex-col gap-5">
-        {/* 색상 / 배경 효과 / 폰트 — 한 줄(sm:grid-cols-3) 콤보박스. 모바일은 stack. */}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {/* 색상 / 배경 효과 / 폰트 — 한 줄(sm:grid-cols-3) 콤보박스.
+            모바일은 색상·배경효과를 한 줄 2열로, 폰트는 아래 줄로. */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <Field label="색상">
             <Combobox
               options={COLOR_THEMES}
