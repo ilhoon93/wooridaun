@@ -446,6 +446,12 @@ export const MainSectionSchema = z.preprocess(
       layout: z.enum(MAIN_LAYOUTS).default('poster'),
       heroImage: z.string().url().nullable().optional(),
       greeting: z.string().max(500).default(''),
+      /**
+       * 다크 배경 테마에서 이름·날짜·인사말(제목 제외)만 어두운 색으로.
+       * 리본 프레임의 흰 여백처럼 밝은 요소 위에 이 텍스트가 놓일 때 가독성을
+       * 확보하기 위한 옵션. 기본 false = 기존 동작(테마 글씨색 그대로).
+       */
+      darkSubText: z.boolean().default(false),
       /** Free AI generation is one-shot; flips true after a successful run. */
       aiUsed: z.boolean().default(false),
       posterDesign: PosterDesignSchema,
@@ -456,6 +462,7 @@ export const MainSectionSchema = z.preprocess(
     .default({
       layout: 'poster',
       greeting: '',
+      darkSubText: false,
       aiUsed: false,
       posterDesign: PosterDesignSchema.parse(undefined),
       illustrationDesign: IllustrationDesignSchema.parse(undefined),

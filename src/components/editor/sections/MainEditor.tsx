@@ -29,6 +29,7 @@ import {
   DEFAULT_TITLE_FONT_KO,
   DEFAULT_TITLE_FONT_EN,
   isKoreanTitleText,
+  isDarkColorTheme,
   type TitleFontKey,
 } from '@/lib/theme';
 import { SectionEditor, type SectionDragProps } from '../SectionEditor';
@@ -86,8 +87,12 @@ const TITLE_COLOR_PRESETS = [
 export function MainEditor({ drag }: { drag?: SectionDragProps }) {
   const main = useEditorStore((s) => s.content?.main);
   const invitationId = useEditorStore((s) => s.invitationId);
+  const colorTheme = useEditorStore((s) => s.content?.theme.colorTheme);
   const patch = useEditorStore((s) => s.patchSection);
   if (!main || !invitationId) return null;
+
+  // 다크 배경 테마에서만 "이름·날짜·인사말 어둡게" 옵션 노출.
+  const isDarkTheme = !!colorTheme && isDarkColorTheme(colorTheme);
 
   const layout = main.layout ?? 'poster';
   const showImagePicker = layout !== 'text' && layout !== 'illustration';
@@ -200,6 +205,20 @@ export function MainEditor({ drag }: { drag?: SectionDragProps }) {
             </div>
           )}
         </div>
+
+        {/* 다크 배경 테마 전용 — 이름·날짜·인사말(제목 제외)만 어둡게.
+            리본 프레임의 흰 여백처럼 밝은 요소 위에 글씨가 놓일 때 가독성 확보용.
+            라이트 테마에서는 노출하지 않는다(무의미). */}
+        {isDarkTheme && (
+          <div className="rounded-md border border-input bg-muted/20 px-3 py-2">
+            <ToggleRow
+              label="이름·날짜·인사말 어둡게"
+              hint="다크 배경용 — 제목은 그대로 두고 이름·날짜·인사말 글씨만 어두운 색으로."
+              checked={!!main.darkSubText}
+              onChange={(v) => patch('main', { ...main, darkSubText: v })}
+            />
+          </div>
+        )}
 
         {isPoster && design && (
           <PosterDesignControls
