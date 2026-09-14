@@ -199,14 +199,14 @@ export const THEME_PALETTES: Record<ColorTheme, Palette> = {
     dot: '#EAD9A0',
     petals: ['#FBEBB4', '#EAD9A0', '#FFF8E0', '#DCC066'],
   },
-  // 로즈펄 — 진주빛 광택(펄 패턴) 위에 은은한 연핑크 + 모브 브라운 글자.
-  // 샴페인/펄 같은 고급스러운 핑크 톤.
+  // 로즈펄 — 진주빛 광택 위에 연한 핫핑크 바탕 + 진한 빨강(크림슨) 글자.
+  // 화사하고 사랑스러운 핑크 톤.
   rosePearl: {
-    bg: '#FBEBE6',
-    fg: '#6B4A46',
-    accent: '#C99A8E',
-    dot: '#EBD3CC',
-    petals: ['#F6DDD6', '#EBD3CC', '#FFF3EE', '#D8B0A6'],
+    bg: '#FCE1EC',
+    fg: '#9E1B34',
+    accent: '#DB5C86',
+    dot: '#F3C4D6',
+    petals: ['#FAD4E1', '#F3C4D6', '#FFF0F5', '#E58BAD'],
     bgPattern: ROSE_PEARL_PATTERN,
   },
   // 파우더블루 — 맑고 옅은 파랑 바탕 + 딥 블루 글자 + 소프트 블루 포인트.
