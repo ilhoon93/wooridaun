@@ -70,8 +70,6 @@ export function InvitationsTable({
 }) {
   const router = useRouter();
   const [emailInput, setEmailInput] = useState(email);
-  // 미리보기 모달 — 클릭한 알림장의 id/라벨을 담아 iframe 으로 인라인 표시.
-  const [preview, setPreview] = useState<{ id: string; label: string } | null>(null);
 
   const go = (nextEmail: string, nextPublished: boolean, nextPage: number) => {
     const params = new URLSearchParams();
@@ -137,7 +135,7 @@ export function InvitationsTable({
               <th className="px-3 py-2 text-left font-medium">이메일</th>
               <th className="px-3 py-2 text-left font-medium">신랑 · 신부</th>
               <th className="px-3 py-2 text-left font-medium">예식일</th>
-              <th className="px-2 py-2 text-center font-medium">미리보기</th>
+              <th className="px-2 py-2 text-center font-medium">수정 여부</th>
               <th className="px-2 py-2 text-center font-medium">상태</th>
               <th className="px-3 py-2 text-left font-medium">보기</th>
             </tr>
@@ -169,28 +167,29 @@ export function InvitationsTable({
                   <td className="whitespace-nowrap px-3 py-2 text-[12px] text-[#5C4633]">
                     {r.wedding_date ?? '-'}
                   </td>
-                  {/* 미리보기 — 수정됨/미수정 배지를 그대로 두되 버튼으로 만들어,
-                      누르면 인라인 모달로 운영자 미리보기를 띄운다. */}
+                  {/* 수정 여부 — 수정됨/미수정 배지 + 그 아래 미리보기(새 탭) 링크. */}
                   <td className="px-2 py-2 text-center">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setPreview({
-                          id: r.id,
-                          label: `${r.groom_name || '-'} · ${r.bride_name || '-'}`,
-                        })
-                      }
-                      title="미리보기 열기"
-                      className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 transition-opacity hover:opacity-80 ${
-                        r.was_made == null
-                          ? 'bg-stone-50 text-stone-500 ring-stone-200'
-                          : r.was_made
-                            ? 'bg-sky-50 text-sky-700 ring-sky-200'
-                            : 'bg-stone-100 text-stone-500 ring-stone-200'
-                      }`}
-                    >
-                      {r.was_made == null ? '미리보기' : r.was_made ? '수정됨' : '미수정'}
-                    </button>
+                    <div className="flex flex-col items-center gap-1">
+                      {r.was_made == null ? (
+                        <span className="text-[10px] text-[#B0A088]">-</span>
+                      ) : r.was_made ? (
+                        <span className="inline-block rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700 ring-1 ring-sky-200">
+                          수정됨
+                        </span>
+                      ) : (
+                        <span className="inline-block rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-500 ring-1 ring-stone-200">
+                          미수정
+                        </span>
+                      )}
+                      <a
+                        href={`/admin/invitations/${r.id}/preview`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10.5px] text-[#8B7355] underline hover:text-[#5C4633]"
+                      >
+                        미리보기 ↗
+                      </a>
+                    </div>
                   </td>
                   <td className="px-2 py-2 text-center">
                     <span
@@ -201,15 +200,7 @@ export function InvitationsTable({
                   </td>
                   <td className="px-3 py-2 text-[12px]">
                     <div className="flex flex-col gap-0.5">
-                      {/* 미발행 포함 모든 알림장을 운영자 미리보기로 열람 */}
-                      <a
-                        href={`/admin/invitations/${r.id}/preview`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[#8B7355] underline hover:text-[#5C4633]"
-                      >
-                        미리보기 ↗
-                      </a>
+                      {/* 운영자 미리보기 링크는 '수정 여부' 열로 이동. 여기선 하객/소장용만. */}
                       {r.is_published && r.pub_slug && (
                         <span className="inline-flex items-center gap-1.5">
                           <a
@@ -282,52 +273,6 @@ export function InvitationsTable({
           다음 →
         </button>
       </div>
-
-      {/* 인라인 미리보기 모달 — 운영자 미리보기 페이지를 iframe 으로 띄운다.
-          배경 클릭 또는 닫기 버튼으로 닫힌다. */}
-      {preview && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setPreview(null)}
-        >
-          <div
-            className="flex max-h-[90vh] w-full max-w-[420px] flex-col overflow-hidden rounded-xl bg-white shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between gap-2 border-b border-[#E8DCC9] px-4 py-2.5">
-              <span className="truncate text-sm font-medium text-[#3D2E1F]">
-                미리보기 · {preview.label}
-              </span>
-              <div className="flex items-center gap-2">
-                <a
-                  href={`/admin/invitations/${preview.id}/preview`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[11px] text-[#8B7355] underline hover:text-[#5C4633]"
-                >
-                  새 탭 ↗
-                </a>
-                <button
-                  type="button"
-                  onClick={() => setPreview(null)}
-                  aria-label="닫기"
-                  className="rounded-md px-2 py-0.5 text-lg leading-none text-[#8B7355] hover:bg-[#F1E9DC]"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-            <iframe
-              key={preview.id}
-              src={`/admin/invitations/${preview.id}/preview`}
-              title="알림장 미리보기"
-              className="h-[70vh] w-full flex-1 border-0 bg-[#FAF7F2]"
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -52,41 +52,52 @@ export default async function AdminInvitationsPage({ searchParams }: PageProps) 
     hasMore = raw.length > PAGE_SIZE;
     rows = raw.slice(0, PAGE_SIZE);
 
-    // 하객용(guest)/소장용(owner) 방문 세션 수 집계 — 이 페이지에 보이는
-    // 알림장들만 guest_visits 에서 조회해 role 별로 센다. (VisitTracker 가
-    // 세션당 role 별 1행씩 기록하므로 행 수 ≈ 방문자 수.)
+    // 하객용(guest)/소장용(owner) 방문 세션 수 집계.
+    //
+    // 주의(과거 버그): 예전엔 guest_visits 행을 통째로 select 해서 JS 로 셌는데,
+    //  (1) PostgREST 기본 1000행 상한에 걸려 방문이 많은 알림장은 0으로 누락되고,
+    //  (2) viewer_role(마이그 076) 컬럼이 없는 환경에선 select 자체가 실패해
+    //      모든 카운트가 0으로 떨어졌다.
+    // → 알림장별로 서버측 exact head count 를 쓴다(행 전송 없음, 상한 무관).
+    //   owner 수는 viewer_role 필터가 실패하면 0 으로 간주(=하객으로 합산)해
+    //   076 미적용 환경에서도 총 방문수는 정확히 나오게 한다.
     const ids = rows.map((r) => r.id);
     if (ids.length > 0) {
-      // viewer_role 컬럼은 마이그 076 — 자동생성 타입에 아직 없어 느슨히 캐스팅.
-      const { data: visits, error: vErr } = await (
-        sb.from('guest_visits') as unknown as {
-          select: (cols: string) => {
-            in: (
-              col: string,
-              vals: string[],
-            ) => Promise<{
-              data: { invitation_id: string; viewer_role: string | null }[] | null;
-              error: { message: string } | null;
-            }>;
-          };
-        }
-      )
-        .select('invitation_id, viewer_role')
-        .in('invitation_id', ids);
-      if (!vErr && Array.isArray(visits)) {
-        const counts = new Map<string, { guest: number; owner: number }>();
-        for (const v of visits) {
-          const c = counts.get(v.invitation_id) ?? { guest: 0, owner: 0 };
-          if (v.viewer_role === 'owner') c.owner += 1;
-          else c.guest += 1;
-          counts.set(v.invitation_id, c);
-        }
-        rows = rows.map((r) => ({
-          ...r,
-          guestVisits: counts.get(r.id)?.guest ?? 0,
-          ownerVisits: counts.get(r.id)?.owner ?? 0,
-        }));
-      }
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          const totalRes = await sb
+            .from('guest_visits')
+            .select('*', { count: 'exact', head: true })
+            .eq('invitation_id', id);
+          const total = totalRes.count ?? 0;
+
+          // viewer_role 컬럼이 없으면 error 를 돌려줄 뿐 throw 하지 않음 → owner=0.
+          const ownerRes = await (
+            sb.from('guest_visits') as unknown as {
+              select: (
+                cols: string,
+                opts: { count: 'exact'; head: true },
+              ) => {
+                eq: (c: string, v: string) => {
+                  eq: (c: string, v: string) => Promise<{ count: number | null }>;
+                };
+              };
+            }
+          )
+            .select('*', { count: 'exact', head: true })
+            .eq('invitation_id', id)
+            .eq('viewer_role', 'owner');
+          const owner = ownerRes.count ?? 0;
+
+          return { id, guest: Math.max(0, total - owner), owner };
+        }),
+      );
+      const map = new Map(results.map((r) => [r.id, r]));
+      rows = rows.map((r) => ({
+        ...r,
+        guestVisits: map.get(r.id)?.guest ?? 0,
+        ownerVisits: map.get(r.id)?.owner ?? 0,
+      }));
     }
   } catch (e) {
     errorMsg = e instanceof Error ? e.message : String(e);
