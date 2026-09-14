@@ -41,6 +41,13 @@ interface Props {
   count?: number;
   type?: PetalType;
   colors?: readonly string[];
+  /**
+   * 모바일 실시간 미리보기 전용 — 전체 슬라이드를 transform:scale 로 크게 축소해
+   * 보여주다 보니, 원래도 작고 옅은 '흰 꽃잎'이 그 축소 배율에서 사실상 안 보인다.
+   * 이 값이 true 면 흰 꽃잎에 한해 미리보기 안에서만 크기를 키우고 테두리를
+   * 강조한다. 발행 화면·데스크톱 미리보기 등 다른 곳은 기본값(false)이라 무영향.
+   */
+  boostWhitePetal?: boolean;
 }
 
 /**
@@ -56,6 +63,7 @@ export function FallingPetals({
   count = PETAL_COUNT,
   type = 'flower',
   colors = DEFAULT_COLORS,
+  boostWhitePetal = false,
 }: Props) {
   const palette = colors.length > 0 ? colors : DEFAULT_COLORS;
   const petals = useMemo<Petal[]>(
@@ -94,7 +102,9 @@ export function FallingPetals({
   }
   const isTexture = PETAL_IS_TEXTURE[type];
   const glyph = PETAL_GLYPHS[type];
-  const sizeScale = PETAL_SIZE_SCALE[type];
+  // 흰 꽃잎은 모바일 미리보기(boostWhitePetal)에서만 크게·또렷하게. 그 외엔 원래대로.
+  const petalBold = type === 'whitePetal' && boostWhitePetal;
+  const sizeScale = PETAL_SIZE_SCALE[type] * (petalBold ? 2.6 : 1);
 
   return (
     <div
@@ -137,7 +147,7 @@ export function FallingPetals({
                 lineHeight: 1,
               }}
             >
-              {isTexture ? <PetalShape type={type} color={p.color} /> : glyph}
+              {isTexture ? <PetalShape type={type} color={p.color} bold={petalBold} /> : glyph}
             </span>
           </span>
         );
@@ -198,7 +208,16 @@ export function FallingPetals({
  * Exported so the theme editor can reuse the exact same shape as a preview
  * swatch — no second source of truth for what each texture looks like.
  */
-export function PetalShape({ type, color }: { type: PetalType; color: string }) {
+export function PetalShape({
+  type,
+  color,
+  bold = false,
+}: {
+  type: PetalType;
+  color: string;
+  /** 흰 꽃잎 전용 — 작게 축소되는 모바일 미리보기에서 윤곽을 또렷하게. */
+  bold?: boolean;
+}) {
   // Stable but unique gradient id per render — color string is enough since
   // multiple petals with the same color can share a gradient.
   const gradId = `pg-${type}-${color.replace('#', '')}`;
@@ -289,7 +308,9 @@ export function PetalShape({ type, color }: { type: PetalType; color: string }) 
             <stop offset="100%" stopColor="#C9A8A0" stopOpacity="0.16" />
           </linearGradient>
         </defs>
-        {/* 꽃잎 본체 — 위쪽 V자 노치, 아래로 갈수록 둥글게 부풀어 오른 형태 */}
+        {/* 꽃잎 본체 — 위쪽 V자 노치, 아래로 갈수록 둥글게 부풀어 오른 형태.
+            bold 모드(모바일 미리보기 한정)는 작게 축소돼도 형태가 보이도록
+            테두리를 또렷하게 강조한다. 발행 화면은 기본값 그대로. */}
         <path
           d="M17 7
              C 10 7, 4 13, 4 23
@@ -301,8 +322,8 @@ export function PetalShape({ type, color }: { type: PetalType; color: string }) 
              L 18 9
              Z"
           fill={`url(#${gradId})`}
-          stroke="rgba(180,140,135,0.32)"
-          strokeWidth="0.45"
+          stroke={bold ? 'rgba(150,95,90,0.55)' : 'rgba(180,140,135,0.32)'}
+          strokeWidth={bold ? 0.8 : 0.45}
         />
         {/* 입체감용 음영 오버레이 — 우상단에서 비추는 빛으로 가정 */}
         <path

@@ -278,6 +278,15 @@ export const COLOR_THEME_LABELS: Record<ColorTheme, string> = {
   navy: '네이비',
 };
 
+// 배경이 어둡고 글씨가 밝은 테마 — 메인 슬라이드의 "이름·날짜·인사말 어둡게"
+// 옵션을 노출할 대상. (charcoal 은 밝은 바탕이라 제외.)
+export const DARK_COLOR_THEMES = ['dusk', 'midnight', 'navy'] as const;
+export const isDarkColorTheme = (t: ColorTheme): boolean =>
+  (DARK_COLOR_THEMES as readonly ColorTheme[]).includes(t);
+
+// 다크 테마에서 이름·날짜·인사말만 어둡게 바꿀 때 쓰는 글씨색(따뜻한 먹빛).
+export const DARK_SUBTEXT_COLOR = '#2A2320';
+
 // 'flower'/'heart'/'star'/'snow' 는 글리프(이모지/문자) 효과,
 // 'sakura'/'leaf'/'whitePetal' 은 SVG 텍스처. 'bokeh'/'starlight' 은
 // "떨어지는" 효과가 아니라 화면 위에서 페이드되는 별도 분기.

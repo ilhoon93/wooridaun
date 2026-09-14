@@ -61,6 +61,12 @@ interface Props {
    * 정적으로 보여야 하는 곳에서 사용. 편집용 실시간 미리보기에서는 미지정(false).
    */
   staticPreview?: boolean;
+  /**
+   * 모바일 실시간 미리보기 전용 — 슬라이드 전체를 크게 축소해 보여주는 미리보기에서
+   * '흰 꽃잎' 배경효과만 사실상 안 보이는 문제를 위해, 미리보기 안에서만 흰 꽃잎을
+   * 키워 보여준다. 발행 화면·데스크톱 미리보기는 기본값(false)이라 무영향.
+   */
+  boostWhitePetal?: boolean;
 }
 
 export function InvitationSlides({
@@ -77,6 +83,7 @@ export function InvitationSlides({
   manualBgm,
   coverOnly,
   staticPreview,
+  boostWhitePetal,
 }: Props) {
   // 운영자가 고른 출력 형식으로 사전 포맷팅 — 자식 슬라이드들은 받은 문자열을
   // 그대로 표시(슬라이드별로 다른 변환을 거치지 않게 단일 출처).
@@ -233,6 +240,7 @@ export function InvitationSlides({
         forceBgm={forceBgm}
         manualBgm={manualBgm}
         hostMode={content.theme.hostMode}
+        boostWhitePetal={boostWhitePetal}
         slideReveal={slideReveal}
       >
         {slides}

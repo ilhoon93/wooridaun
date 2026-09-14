@@ -48,6 +48,12 @@ interface Props {
   /** 혼주용 큰 글씨 모드 — 본문(rem 기반) 텍스트를 전반적으로 키운다(globals.css .wd-host-text). */
   hostMode?: boolean;
   /**
+   * 모바일 실시간 미리보기 전용 — transform:scale 로 크게 축소되는 미리보기에서
+   * '흰 꽃잎'만 안 보이는 문제를 위해, 흰 꽃잎을 미리보기 안에서만 키워 보여준다.
+   * 발행/데스크톱 등 다른 곳은 기본값(false)이라 무영향.
+   */
+  boostWhitePetal?: boolean;
+  /**
    * 슬라이드별 등장 방식(children 인덱스와 정렬):
    *   'none'     — 효과 없음(메인 표지 / 옵션 off)
    *   'stagger'  — 제목부터 아래로 계단식 순차 등장
@@ -69,6 +75,7 @@ export function SlideContainer({
   forceBgm = false,
   manualBgm = false,
   hostMode = false,
+  boostWhitePetal = false,
   slideReveal,
 }: Props) {
   const slides = children.filter(Boolean);
@@ -217,7 +224,11 @@ export function SlideContainer({
               {/* 배경 효과 — 각 슬라이드 박스 안에 z-10 으로 깔아둔다.
                   슬라이드 콘텐츠(z-auto) 위에 펠탈/별빛이 떨어지지만, VideoSlide 처럼
                   z-20 이상을 설정한 요소(영상 컨테이너)는 효과 위로 올라와 가려짐. */}
-              <FallingPetals type={petalType} colors={palette.petals} />
+              <FallingPetals
+                type={petalType}
+                colors={palette.petals}
+                boostWhitePetal={boostWhitePetal}
+              />
             </div>
           );
         })}

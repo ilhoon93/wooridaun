@@ -18,8 +18,18 @@ import {
   isKoreanTitleText,
   DEFAULT_TITLE_FONT_KO,
   getDisplayFontSize,
+  DARK_SUBTEXT_COLOR,
   type TitleFontKey,
 } from '@/lib/theme';
+
+/**
+ * 다크 배경 테마에서 "이름·날짜·인사말만 어둡게"(main.darkSubText) 옵션이 켜졌을 때
+ * 해당 텍스트에 줄 색. 꺼져 있으면 undefined 를 반환해 inline color 를 생략 →
+ * 테마 글씨색(currentColor)을 그대로 상속한다. 제목에는 적용하지 않는다.
+ */
+function subTextColor(main: InvitationContent['main']): string | undefined {
+  return main.darkSubText ? DARK_SUBTEXT_COLOR : undefined;
+}
 import { Confetti } from '@/components/shared/Confetti';
 import { HeartClip } from '@/components/shared/HeartClip';
 import { HandwritingStroke } from '@/components/invitation/slides/HandwritingStroke';
@@ -560,6 +570,7 @@ function IllustrationSlide({
     main.illustrationDesign ?? IllustrationDesignSchema.parse(undefined);
 
   const titleColor = design.title.color || 'currentColor';
+  const subColor = subTextColor(main);
   const illustSrc = `/illustrations/illust-${design.variant}.png`;
   // 사용자가 picker 에서 고른 폰트 우선. 한글 문구로 바뀌어 한글 폰트로 자동
   // 전환된 상태라면 design.title.font 가 이미 한글 키 — 그대로 사용.
@@ -594,7 +605,7 @@ function IllustrationSlide({
         <PositionedBox position={design.messageBox.position} delay={0.15}>
           <p
             className="max-w-md whitespace-pre-line leading-relaxed opacity-80"
-            style={{ fontSize: `${design.messageBox.fontSize}px` }}
+            style={{ fontSize: `${design.messageBox.fontSize}px`, color: subColor }}
           >
             {main.greeting}
           </p>
@@ -606,7 +617,7 @@ function IllustrationSlide({
         <PositionedBox position={design.nameBox.position} delay={0.3}>
           <p
             className="font-light tracking-wide"
-            style={{ fontSize: `${design.nameBox.fontSize}px` }}
+            style={{ fontSize: `${design.nameBox.fontSize}px`, color: subColor }}
           >
             신랑 {groomName} · 신부 {brideName}
           </p>
@@ -621,6 +632,7 @@ function IllustrationSlide({
             style={{
               fontFamily: PLAYFAIR,
               fontSize: `${design.dateBox.fontSize}px`,
+              color: subColor,
             }}
           >
             {formatDateForIllust(weddingDate)}
@@ -669,6 +681,7 @@ function TextLayoutSlide({
   const design: TextDesign = main.textDesign ?? TextDesignSchema.parse(undefined);
 
   const titleColor = design.title.color || 'currentColor';
+  const subColor = subTextColor(main);
   const decoSrc = `/illustrations/text-${design.variant}.png`;
   // 사용자가 picker 에서 고른 폰트 우선. 구버전 데이터로 font 가 없으면
   // autoTitleFontFor 로 한/영 자동 매핑.
@@ -828,7 +841,7 @@ function TextLayoutSlide({
         <PositionedBox position={design.messageBox.position} delay={0.15}>
           <p
             className="max-w-md whitespace-pre-line leading-relaxed opacity-80"
-            style={{ fontSize: `${design.messageBox.fontSize}px` }}
+            style={{ fontSize: `${design.messageBox.fontSize}px`, color: subColor }}
           >
             {main.greeting}
           </p>
@@ -838,12 +851,15 @@ function TextLayoutSlide({
       {/* 이름 — 4가지 레이아웃 (inline / stack / stackHeart / inlineCross) */}
       {design.nameBox.enabled && (
         <PositionedBox position={design.nameBox.position} delay={0.3}>
-          <NameLayout
-            layout={design.nameBox.layout}
-            firstName={firstName}
-            secondName={secondName}
-            fontSize={design.nameBox.fontSize}
-          />
+          {/* darkSubText 옵션 시 이름만 어둡게 — NameLayout 내부는 currentColor 상속 */}
+          <div style={{ color: subColor }}>
+            <NameLayout
+              layout={design.nameBox.layout}
+              firstName={firstName}
+              secondName={secondName}
+              fontSize={design.nameBox.fontSize}
+            />
+          </div>
         </PositionedBox>
       )}
 
@@ -855,6 +871,7 @@ function TextLayoutSlide({
             style={{
               fontFamily: PLAYFAIR,
               fontSize: `${design.dateBox.fontSize}px`,
+              color: subColor,
             }}
           >
             {formatDateForIllust(weddingDate)}
@@ -1249,6 +1266,7 @@ function FrameSlide({
   const variant: FrameVariant = design.variant;
   const titleFont = TITLE_FONT_OPTIONS[design.title.font].family;
   const titleColor = design.title.color || 'currentColor';
+  const subColor = subTextColor(main);
   const isScreen = variant === 'screen';
   const imagePos = design.imagePosition ?? { x: 50, y: 50 };
   // 스크린 변형 — 업로드 이미지의 실제 가로:세로 비율(width/height) 을 측정해
@@ -1326,7 +1344,7 @@ function FrameSlide({
         <PositionedBox position={design.messageBox.position} delay={0.15}>
           <p
             className="max-w-md whitespace-pre-line leading-relaxed opacity-80"
-            style={{ fontSize: `${design.messageBox.fontSize}px` }}
+            style={{ fontSize: `${design.messageBox.fontSize}px`, color: subColor }}
           >
             {main.greeting}
           </p>
@@ -1338,7 +1356,7 @@ function FrameSlide({
         <PositionedBox position={design.nameBox.position} delay={0.3}>
           <p
             className="font-light tracking-wide"
-            style={{ fontSize: `${design.nameBox.fontSize}px` }}
+            style={{ fontSize: `${design.nameBox.fontSize}px`, color: subColor }}
           >
             {groomName} <span className="opacity-60">&amp;</span> {brideName}
           </p>
@@ -1350,7 +1368,7 @@ function FrameSlide({
         <PositionedBox position={design.dateBox.position} delay={0.45}>
           <p
             className="tracking-[0.2em] opacity-90"
-            style={{ fontSize: `${design.dateBox.fontSize}px` }}
+            style={{ fontSize: `${design.dateBox.fontSize}px`, color: subColor }}
           >
             {formatDate(weddingDate)}
           </p>
