@@ -175,10 +175,6 @@ export function EditorMobilePreview({ invitationId, open, onOpenChange }: Props)
                     scoped
                     // 편집 중 자동재생은 막되, 음악 버튼은 노출해 탭하면 들어볼 수 있게.
                     manualBgm
-                    // 이 미리보기는 슬라이드를 transform:scale 로 크게 축소하는데,
-                    // 그 배율에선 원래 작고 옅은 '흰 꽃잎'이 사실상 안 보인다.
-                    // 미리보기 안에서만 흰 꽃잎을 키워 보이게 한다(발행 화면 무영향).
-                    boostWhitePetal
                   />
                 </div>
               </div>
