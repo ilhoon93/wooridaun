@@ -16,7 +16,7 @@ export const COLOR_THEMES = [
   'letterPaper', // 편지지 — 흰 바탕 + 검정 글자
   'champagne',   // 샴페인 — 웜 아이보리 + 와인 글자
   'butter',      // 버터 — 연노랑 크림 + 앰버 골드
-  'rosePearl',   // 로즈펄 — 펄/샴페인 느낌의 연핑크
+  'rosePearl',   // 핫핑크 — 연한 핫핑크 바탕 + 진한 빨강 글자 (key 는 호환 위해 유지)
   'powder',      // 파우더블루 — 연한 파랑
   'rose',        // 더스티 로즈 — 핑크 바탕 + 모카 글자 (로맨틱)
   'forest',      // 포레스트 — 아이보리 + 딥 그린 (보태니컬)
@@ -270,7 +270,7 @@ export const COLOR_THEME_LABELS: Record<ColorTheme, string> = {
   midnight: '미드나잇',
   champagne: '샴페인',
   butter: '버터',
-  rosePearl: '로즈펄',
+  rosePearl: '핫핑크',
   powder: '파우더블루',
   rose: '로즈',
   forest: '포레스트',
