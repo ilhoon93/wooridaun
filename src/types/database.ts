@@ -102,6 +102,8 @@ export type Database = {
           duration_seconds: number | null;
           slides_viewed: Json;
           visited_at: string;
+          // migration 076 — 하객용(guest)/소장용(owner) 조회 구분. not null default 'guest'.
+          viewer_role: 'guest' | 'owner';
         };
         Insert: {
           id?: string;
@@ -112,6 +114,7 @@ export type Database = {
           duration_seconds?: number | null;
           slides_viewed?: Json;
           visited_at?: string;
+          viewer_role?: 'guest' | 'owner';
         };
         Update: Partial<Database['public']['Tables']['guest_visits']['Insert']>;
         Relationships: [];
