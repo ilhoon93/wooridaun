@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z, ZodError } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import type { Database } from '@/types/database';
 
 const BodySchema = z.object({
   invitationId: z.string().uuid(),
@@ -26,18 +27,18 @@ export async function POST(req: Request) {
 
   // RLS: insert allowed only for active (published, non-expired) invitations.
   const supabase = createClient();
-  const { error } = await supabase.from('guest_visits').insert({
+  const row: Database['public']['Tables']['guest_visits']['Insert'] = {
     invitation_id: body.invitationId,
     visitor_name: body.visitorName ?? null,
     visitor_side: body.visitorSide ?? null,
     device_type: body.deviceType ?? null,
     duration_seconds: body.durationSeconds ?? null,
     slides_viewed: body.slidesViewed ?? [],
-    // viewer_role 컬럼은 마이그 076. 미적용 환경에서도 나머지 삽입이 되도록 값이
-    // 있을 때만 포함(default 'guest').
-    ...(body.viewerRole ? { viewer_role: body.viewerRole } : {}),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  } as any);
+  };
+  // viewer_role(마이그 076)은 값이 있을 때만 포함해, 미적용 환경에서도 나머지
+  // 삽입이 되게 하고 guest 는 컬럼 default('guest')에 맡긴다. (기존 동작 유지)
+  if (body.viewerRole) row.viewer_role = body.viewerRole;
+  const { error } = await supabase.from('guest_visits').insert(row);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ success: true });

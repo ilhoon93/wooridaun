@@ -158,22 +158,13 @@ export default async function InvitationStatsAdminPage() {
   } | null = null;
   let engagementError: string | null = null;
   try {
-    // viewer_role(마이그 076)은 자동생성 타입에 없어 owner 필터만 느슨히 캐스팅.
-    const ownerVisitsQuery = (
-      sb.from('guest_visits') as unknown as {
-        select: (
-          cols: string,
-          opts: { count: 'exact'; head: true },
-        ) => { eq: (c: string, v: string) => Promise<{ count: number | null }> };
-      }
-    )
-      .select('*', { count: 'exact', head: true })
-      .eq('viewer_role', 'owner');
-
     const [totalVisitsRes, ownerVisitsRes, gbRes, sigRes, cheersRes, likesRes] =
       await Promise.all([
         sb.from('guest_visits').select('*', { count: 'exact', head: true }),
-        ownerVisitsQuery,
+        sb
+          .from('guest_visits')
+          .select('*', { count: 'exact', head: true })
+          .eq('viewer_role', 'owner'),
         sb.from('guestbook_messages').select('*', { count: 'exact', head: true }),
         sb.from('signatures').select('*', { count: 'exact', head: true }),
         sb.from('invitation_cheers').select('cheers_count'),
@@ -297,10 +288,14 @@ export default async function InvitationStatsAdminPage() {
 
       {/* ── 참여(engagement) 지표 — 전체 알림장 누적 ─────────── */}
       <section className="mt-8">
-        <div className="mb-3 flex items-baseline justify-between">
+        <div className="mb-1 flex items-baseline justify-between">
           <h2 className="text-sm font-semibold text-[#3D2E1F]">방문·참여 지표</h2>
           <span className="text-[11px] text-[#8B7355]">전체 알림장 누적</span>
         </div>
+        <p className="mb-3 text-[10.5px] leading-relaxed text-[#B09B80]">
+          하객용/소장용 방문 분리 집계는 방문 구분 기능(viewer_role) 도입 이후부터
+          정확합니다. 그 이전에 쌓인 소장용 방문은 하객용으로 집계되어 있습니다.
+        </p>
         {engagementError ? (
           <p className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">
             참여 지표 집계 실패: {engagementError}
