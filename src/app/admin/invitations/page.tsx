@@ -53,50 +53,63 @@ export default async function AdminInvitationsPage({ searchParams }: PageProps) 
     rows = raw.slice(0, PAGE_SIZE);
 
     // 하객용(guest)/소장용(owner) 방문 세션 수 집계.
-    //
-    // 주의(과거 버그): 예전엔 guest_visits 행을 통째로 select 해서 JS 로 셌는데,
-    //  (1) PostgREST 기본 1000행 상한에 걸려 방문이 많은 알림장은 0으로 누락되고,
-    //  (2) viewer_role(마이그 076) 컬럼이 없는 환경에선 select 자체가 실패해
-    //      모든 카운트가 0으로 떨어졌다.
-    // → 알림장별로 서버측 exact head count 를 쓴다(행 전송 없음, 상한 무관).
-    //   owner 수는 viewer_role 필터가 실패하면 0 으로 간주(=하객으로 합산)해
-    //   076 미적용 환경에서도 총 방문수는 정확히 나오게 한다.
     const ids = rows.map((r) => r.id);
     if (ids.length > 0) {
-      const results = await Promise.all(
-        ids.map(async (id) => {
-          const totalRes = await sb
-            .from('guest_visits')
-            .select('*', { count: 'exact', head: true })
-            .eq('invitation_id', id);
-          const total = totalRes.count ?? 0;
+      const counts = new Map<string, { guest: number; owner: number }>();
 
-          // viewer_role 컬럼이 없으면 error 를 돌려줄 뿐 throw 하지 않음 → owner=0.
-          const ownerRes = await (
-            sb.from('guest_visits') as unknown as {
-              select: (
-                cols: string,
-                opts: { count: 'exact'; head: true },
-              ) => {
-                eq: (c: string, v: string) => {
-                  eq: (c: string, v: string) => Promise<{ count: number | null }>;
-                };
-              };
-            }
-          )
-            .select('*', { count: 'exact', head: true })
-            .eq('invitation_id', id)
-            .eq('viewer_role', 'owner');
-          const owner = ownerRes.count ?? 0;
-
-          return { id, guest: Math.max(0, total - owner), owner };
-        }),
+      // 1) 빠른 경로 — 단일 RPC 로 group by 집계(마이그 078). N+1 제거.
+      //    admin_invitations 와 동일하게 느슨한 타입으로 호출.
+      const visitRpc = sb as unknown as {
+        rpc: (
+          fn: string,
+          args: Record<string, unknown>,
+        ) => Promise<{
+          data:
+            | { invitation_id: string; guest_count: number | string; owner_count: number | string }[]
+            | null;
+          error: { message: string } | null;
+        }>;
+      };
+      const { data: agg, error: aggErr } = await visitRpc.rpc(
+        'admin_invitation_visit_counts',
+        { inv_ids: ids },
       );
-      const map = new Map(results.map((r) => [r.id, r]));
+      const rpcOk = !aggErr && Array.isArray(agg);
+      if (rpcOk && agg) {
+        for (const r of agg) {
+          counts.set(r.invitation_id, {
+            guest: Number(r.guest_count) || 0,
+            owner: Number(r.owner_count) || 0,
+          });
+        }
+      }
+
+      // 2) 폴백 — RPC 미적용(078 미배포)/실패 시 알림장별 서버측 exact head count.
+      //    (행 전송 없음·PostgREST 1000행 상한 무관. owner 는 viewer_role 필터로 카운트.)
+      if (!rpcOk) {
+        const results = await Promise.all(
+          ids.map(async (id) => {
+            const totalRes = await sb
+              .from('guest_visits')
+              .select('*', { count: 'exact', head: true })
+              .eq('invitation_id', id);
+            const total = totalRes.count ?? 0;
+            const ownerRes = await sb
+              .from('guest_visits')
+              .select('*', { count: 'exact', head: true })
+              .eq('invitation_id', id)
+              .eq('viewer_role', 'owner');
+            const owner = ownerRes.count ?? 0;
+            return { id, guest: Math.max(0, total - owner), owner };
+          }),
+        );
+        for (const r of results) counts.set(r.id, { guest: r.guest, owner: r.owner });
+      }
+
       rows = rows.map((r) => ({
         ...r,
-        guestVisits: map.get(r.id)?.guest ?? 0,
-        ownerVisits: map.get(r.id)?.owner ?? 0,
+        guestVisits: counts.get(r.id)?.guest ?? 0,
+        ownerVisits: counts.get(r.id)?.owner ?? 0,
       }));
     }
   } catch (e) {
@@ -119,6 +132,11 @@ export default async function AdminInvitationsPage({ searchParams }: PageProps) 
           알림장을 최종 수정일시순으로 조회합니다. 생성자 이메일로 필터링하고, 발행된 것만
           볼 수 있으며, 발행된 알림장은 링크로 바로 열람할 수 있습니다.
           <span className="ml-2">로그인 계정: {admin.email}</span>
+          <br />
+          <span className="text-[#B09B80]">
+            하객용/소장용 방문수 분리 집계는 방문 구분 기능 도입 이후부터 정확합니다
+            (이전 소장용 방문은 하객용에 포함).
+          </span>
         </p>
       </header>
 
