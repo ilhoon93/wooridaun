@@ -24,9 +24,7 @@ export async function POST(req: Request) {
   }
 
   const supabase = createClient();
-  // site_visits 는 마이그 076. 자동생성 DB 타입에 아직 없어 클라이언트를 캐스팅.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { error } = await supabase
     .from('site_visits')
     .insert({ path: body.path ?? null, device_type: body.deviceType ?? null });
 

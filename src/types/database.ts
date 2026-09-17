@@ -119,6 +119,24 @@ export type Database = {
         Update: Partial<Database['public']['Tables']['guest_visits']['Insert']>;
         Relationships: [];
       };
+      // migration 076 — 홈페이지(랜딩) 방문 집계. 익명 insert, 읽기는 RLS 차단
+      // (집계는 RPC 또는 service-role 로만).
+      site_visits: {
+        Row: {
+          id: string;
+          path: string | null;
+          device_type: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          path?: string | null;
+          device_type?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database['public']['Tables']['site_visits']['Insert']>;
+        Relationships: [];
+      };
       signatures: {
         Row: {
           id: string;

@@ -148,6 +148,9 @@ export default async function InvitationStatsAdminPage() {
   // 하객/소장용 방문(guest_visits), 방명록(guestbook_messages), 서명(signatures),
   // 축하하기(invitation_cheers.cheers_count 합), 사진 좋아요(gallery_likes.like_count 합).
   // 방문/방명록/서명은 head count 로 행 전송 없이 세고, 축하·좋아요는 합계라 값만 읽어 합산.
+  // 홈페이지(랜딩) 방문은 site_visits(마이그 076) — 정확 count(누적) + 최근 7일.
+  // (공개 사회적증거의 public_site_visit_count 는 10단위 내림이라, 운영자용은 정확 수치로.)
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   let engagement: {
     guestVisits: number;
     ownerVisits: number;
@@ -155,21 +158,36 @@ export default async function InvitationStatsAdminPage() {
     signatures: number;
     cheers: number;
     galleryLikes: number;
+    siteVisits: number;
+    siteVisits7d: number;
   } | null = null;
   let engagementError: string | null = null;
   try {
-    const [totalVisitsRes, ownerVisitsRes, gbRes, sigRes, cheersRes, likesRes] =
-      await Promise.all([
-        sb.from('guest_visits').select('*', { count: 'exact', head: true }),
-        sb
-          .from('guest_visits')
-          .select('*', { count: 'exact', head: true })
-          .eq('viewer_role', 'owner'),
-        sb.from('guestbook_messages').select('*', { count: 'exact', head: true }),
-        sb.from('signatures').select('*', { count: 'exact', head: true }),
-        sb.from('invitation_cheers').select('cheers_count'),
-        sb.from('gallery_likes').select('like_count'),
-      ]);
+    const [
+      totalVisitsRes,
+      ownerVisitsRes,
+      gbRes,
+      sigRes,
+      cheersRes,
+      likesRes,
+      siteVisitsRes,
+      siteVisits7dRes,
+    ] = await Promise.all([
+      sb.from('guest_visits').select('*', { count: 'exact', head: true }),
+      sb
+        .from('guest_visits')
+        .select('*', { count: 'exact', head: true })
+        .eq('viewer_role', 'owner'),
+      sb.from('guestbook_messages').select('*', { count: 'exact', head: true }),
+      sb.from('signatures').select('*', { count: 'exact', head: true }),
+      sb.from('invitation_cheers').select('cheers_count'),
+      sb.from('gallery_likes').select('like_count'),
+      sb.from('site_visits').select('*', { count: 'exact', head: true }),
+      sb
+        .from('site_visits')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', sevenDaysAgo),
+    ]);
 
     const totalVisits = totalVisitsRes.count ?? 0;
     const ownerVisits = ownerVisitsRes.count ?? 0;
@@ -187,6 +205,8 @@ export default async function InvitationStatsAdminPage() {
       signatures: sigRes.count ?? 0,
       cheers,
       galleryLikes,
+      siteVisits: siteVisitsRes.count ?? 0,
+      siteVisits7d: siteVisits7dRes.count ?? 0,
     };
   } catch (e) {
     engagementError = e instanceof Error ? e.message : String(e);
@@ -284,6 +304,36 @@ export default async function InvitationStatsAdminPage() {
         />
         <StatCard label="발행된 알림장" value={stats?.published_count ?? 0} small unit="건" />
         <StatCard label="영구소장 적용" value={stats?.archived_count ?? 0} small unit="건" />
+      </section>
+
+      {/* ── 홈페이지(랜딩) 방문 ─────────────────────────── */}
+      <section className="mt-8">
+        <div className="mb-3 flex items-baseline justify-between">
+          <h2 className="text-sm font-semibold text-[#3D2E1F]">홈페이지 방문</h2>
+          <span className="text-[11px] text-[#8B7355]">랜딩 페이지 · 세션 기준</span>
+        </div>
+        {engagementError ? (
+          <p className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+            방문 집계 실패: {engagementError}
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <StatCard
+              label="홈페이지 방문 (누적)"
+              value={engagement?.siteVisits ?? 0}
+              small
+              unit="회"
+              hint="랜딩(/) 방문 세션 누적 — 정확 수치"
+            />
+            <StatCard
+              label="홈페이지 방문 (최근 7일)"
+              value={engagement?.siteVisits7d ?? 0}
+              small
+              unit="회"
+              hint="최근 7일 랜딩 방문 세션"
+            />
+          </div>
+        )}
       </section>
 
       {/* ── 참여(engagement) 지표 — 전체 알림장 누적 ─────────── */}
