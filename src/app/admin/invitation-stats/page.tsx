@@ -160,6 +160,8 @@ export default async function InvitationStatsAdminPage() {
     galleryLikes: number;
     siteVisits: number;
     siteVisits7d: number;
+    /** site_visits 최초 기록 시각(ISO) — 이 값부터 누적임을 표시하기 위함. */
+    siteVisitsSince: string | null;
   } | null = null;
   let engagementError: string | null = null;
   try {
@@ -172,6 +174,7 @@ export default async function InvitationStatsAdminPage() {
       likesRes,
       siteVisitsRes,
       siteVisits7dRes,
+      siteSinceRes,
     ] = await Promise.all([
       sb.from('guest_visits').select('*', { count: 'exact', head: true }),
       sb
@@ -187,6 +190,12 @@ export default async function InvitationStatsAdminPage() {
         .from('site_visits')
         .select('*', { count: 'exact', head: true })
         .gte('created_at', sevenDaysAgo),
+      // 최초 방문 기록 시각 — "언제부터의 누적인지" 표시용.
+      sb
+        .from('site_visits')
+        .select('created_at')
+        .order('created_at', { ascending: true })
+        .limit(1),
     ]);
 
     const totalVisits = totalVisitsRes.count ?? 0;
@@ -207,6 +216,8 @@ export default async function InvitationStatsAdminPage() {
       galleryLikes,
       siteVisits: siteVisitsRes.count ?? 0,
       siteVisits7d: siteVisits7dRes.count ?? 0,
+      siteVisitsSince:
+        (siteSinceRes.data as { created_at: string }[] | null)?.[0]?.created_at ?? null,
     };
   } catch (e) {
     engagementError = e instanceof Error ? e.message : String(e);
@@ -308,10 +319,22 @@ export default async function InvitationStatsAdminPage() {
 
       {/* ── 홈페이지(랜딩) 방문 ─────────────────────────── */}
       <section className="mt-8">
-        <div className="mb-3 flex items-baseline justify-between">
+        <div className="mb-1 flex items-baseline justify-between">
           <h2 className="text-sm font-semibold text-[#3D2E1F]">홈페이지 방문</h2>
           <span className="text-[11px] text-[#8B7355]">랜딩 페이지 · 세션 기준</span>
         </div>
+        <p className="mb-3 text-[10.5px] leading-relaxed text-[#B09B80]">
+          {engagement?.siteVisitsSince
+            ? `방문 기록 기능 도입 이후 누적입니다 — 첫 기록: ${new Date(
+                engagement.siteVisitsSince,
+              ).toLocaleDateString('ko-KR', {
+                timeZone: 'Asia/Seoul',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+              })}. 서비스 오픈 시점부터의 전체 방문 수는 아닙니다(그 이전 방문은 기록되지 않았습니다).`
+            : '방문 기록 기능 도입 이후 누적입니다. 서비스 오픈 시점부터의 전체 방문 수는 아닙니다(그 이전 방문은 기록되지 않았습니다).'}
+        </p>
         {engagementError ? (
           <p className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">
             방문 집계 실패: {engagementError}
