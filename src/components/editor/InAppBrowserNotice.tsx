@@ -64,13 +64,19 @@ export function InAppBrowserNotice() {
         <span aria-hidden className="mt-0.5 text-base leading-none">⚠️</span>
         <div className="min-w-0 flex-1 text-[12px] leading-relaxed">
           <p className="font-semibold">
-            {appName ? `${appName} 내장 브라우저` : '앱 내장 브라우저'}에서는 편집 중 로그인이
-            풀릴 수 있어요.
+            지금은 {appName ? `${appName} 안(앱 내장 브라우저)` : '앱 내장 브라우저'}에서 열려
+            있어요. 기본 브라우저로 열어 주세요.
           </p>
           <p className="mt-0.5 text-amber-800">
-            안정적인 편집을 위해 <strong>기본 브라우저(사파리·크롬)</strong>로 여는 것을
-            권장해요. 화면 우측 상단 <strong>⋯ 메뉴 → &lsquo;다른 브라우저로 열기&rsquo;</strong>
-            를 이용하시거나, 아래에서 링크를 복사해 브라우저 주소창에 붙여넣어 주세요.
+            <strong>왜냐하면</strong> — 앱 안의 간이 브라우저는 로그인 상태를 오래 유지하지
+            못해, 편집 도중 갑자기 로그인 화면으로 넘어가면서{' '}
+            <strong>작성하던 내용이 사라질 수 있어요.</strong> 사파리·크롬 같은 기본
+            브라우저에서는 이런 문제가 없습니다.
+          </p>
+          <p className="mt-0.5 text-amber-800">
+            <strong>여는 방법</strong> — 화면 우측 상단{' '}
+            <strong>⋯ 메뉴 → &lsquo;다른 브라우저로 열기&rsquo;</strong>, 또는 아래
+            &lsquo;편집 링크 복사&rsquo; 후 브라우저 주소창에 붙여넣기.
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             <button
