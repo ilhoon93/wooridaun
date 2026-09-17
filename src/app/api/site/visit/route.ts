@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z, ZodError } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import { checkAdmin } from '@/lib/auth/admin';
 
 /**
  * 홈페이지(랜딩) 방문 집계 — 사회적 증거의 "홈페이지 방문수" 지표용.
@@ -21,6 +22,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Validation failed', issues: e.issues }, { status: 400 });
     }
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  // 운영자(admin) 본인의 방문은 조회수 집계에서 제외. (이후분만 — 과거 익명 기록은 소급 불가.)
+  if (await checkAdmin()) {
+    return NextResponse.json({ success: true, skipped: 'admin' });
   }
 
   const supabase = createClient();

@@ -334,6 +334,7 @@ export default async function InvitationStatsAdminPage() {
                 day: 'numeric',
               })}. 서비스 오픈 시점부터의 전체 방문 수는 아닙니다(그 이전 방문은 기록되지 않았습니다).`
             : '방문 기록 기능 도입 이후 누적입니다. 서비스 오픈 시점부터의 전체 방문 수는 아닙니다(그 이전 방문은 기록되지 않았습니다).'}
+          {' '}운영자(admin) 본인의 조회는 집계에서 제외됩니다(제외 기능 도입 이후 방문분).
         </p>
         {engagementError ? (
           <p className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">
@@ -368,6 +369,7 @@ export default async function InvitationStatsAdminPage() {
         <p className="mb-3 text-[10.5px] leading-relaxed text-[#B09B80]">
           하객용/소장용 방문 분리 집계는 방문 구분 기능(viewer_role) 도입 이후부터
           정확합니다. 그 이전에 쌓인 소장용 방문은 하객용으로 집계되어 있습니다.
+          방문수에서 운영자(admin) 본인의 조회는 제외됩니다(제외 기능 도입 이후 방문분).
         </p>
         {engagementError ? (
           <p className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">
