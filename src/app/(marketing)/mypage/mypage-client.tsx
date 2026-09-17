@@ -1350,6 +1350,7 @@ function SavedTab({
           <p className="text-sm text-muted-foreground">아직 저장된 알림장이 없어요.</p>
           <Link
             href="/new"
+            prefetch={false}
             className="inline-flex h-10 items-center justify-center rounded-md bg-[#8B7355] px-5 text-sm font-medium text-white"
           >
             새 알림장 만들기
@@ -1378,6 +1379,7 @@ function SavedTab({
         ) : (
           <Link
             href="/new"
+            prefetch={false}
             className="text-xs text-[#8B7355] underline-offset-2 hover:underline"
           >
             + 새 알림장

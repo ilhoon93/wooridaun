@@ -187,6 +187,7 @@ function Hero({ aiSnaps, designs }: { aiSnaps: AiSnapItem[]; designs: SampleDesi
         <div className="mt-7 flex flex-wrap items-center justify-center gap-2">
           <Link
             href="/new"
+            prefetch={false}
             className="inline-flex items-center gap-1.5 rounded-full bg-[var(--wd-ink)] px-6 py-3 text-[13px] font-medium text-[var(--wd-cream)] transition-transform active:scale-[0.97]"
           >
             무료로 알림장 만들기 →
@@ -485,6 +486,7 @@ function InvitationPricingCard() {
 
       <Link
         href="/new"
+        prefetch={false}
         className="mt-6 inline-flex h-11 w-full items-center justify-center rounded-full bg-[var(--wd-ink)] text-sm font-medium text-[var(--wd-cream)]"
       >
         알림장 시작하기
