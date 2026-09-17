@@ -62,31 +62,6 @@ export default async function NewInvitationPage({ searchParams }: PageProps) {
     );
   }
 
-  // 중복 생성 방지 — /new 는 GET 인데도 알림장을 INSERT 한다. Next.js <Link>
-  // prefetch(뷰포트/호버 시 서버 컴포넌트 선실행)·뒤로가기·새로고침으로 이 페이지가
-  // 반복 히트되면 그때마다 빈 알림장이 새로 생겨(계정 한도까지 잠식), 사용자는 편집하던
-  // 화면이 "빈 화면으로 날아간" 것처럼 느낀다. 그래서 일반(프리셋 없음) 진입에서는,
-  // 최근 몇 분 내 만들어진 "이름·날짜가 비어 있고 미발행" 인 초안이 있으면 새로 만들지
-  // 않고 그 초안으로 이어간다(= 같은 알림장으로 복귀 → 로컬 미저장분도 그대로 복구).
-  // 프리셋("비슷하게 만들기") 진입은 시작값이 다르므로 항상 새로 만든다.
-  if (!searchParams.preset) {
-    const recentCutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
-    const { data: reusable } = await supabase
-      .from('invitations')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('is_published', false)
-      .eq('groom_name', '')
-      .eq('bride_name', '')
-      .is('wedding_date', null)
-      .gte('created_at', recentCutoff)
-      .order('created_at', { ascending: false })
-      .limit(1);
-    if (reusable && reusable[0]) {
-      redirect(`/edit/${reusable[0].id}`);
-    }
-  }
-
   const initial = await buildInitialState(searchParams.preset);
 
   for (let attempt = 0; attempt < 3; attempt++) {

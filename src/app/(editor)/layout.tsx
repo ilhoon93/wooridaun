@@ -3,7 +3,6 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { BrandMark } from '@/components/shared/BrandMark';
 import { HeaderNav } from '@/components/marketing/HeaderNav';
-import { InAppBrowserNotice } from '@/components/editor/InAppBrowserNotice';
 import { getDisplayEmail } from '@/lib/naver/account';
 
 export default async function EditorLayout({ children }: { children: React.ReactNode }) {
@@ -38,10 +37,6 @@ export default async function EditorLayout({ children }: { children: React.React
           <HeaderNav loggedIn email={displayEmail} />
         </div>
       </header>
-      {/* 인앱(내장) 브라우저 안내 — 카카오톡·네이버앱 등에서 열면 세션이 불안정해
-          편집 중 로그아웃될 수 있어 외부 브라우저 사용을 권한다. 정식 브라우저에서는
-          렌더되지 않음(무영향). */}
-      <InAppBrowserNotice />
       {children}
     </div>
   );
