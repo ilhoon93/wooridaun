@@ -58,6 +58,7 @@ export function DesignCatalogClient({ designs }: { designs: SampleDesign[] }) {
         <div className="flex w-full shrink-0 flex-col items-start gap-2 sm:mt-1 sm:w-auto sm:items-end">
           <Link
             href="/new"
+            prefetch={false}
             className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-[var(--wd-ink)] px-5 py-3 text-[13px] font-medium text-[var(--wd-cream)] transition-transform active:scale-[0.97]"
           >
             무료로 내 알림장 만들기 →
@@ -158,6 +159,7 @@ function PreviewModal({ design, onClose }: { design: SampleDesign; onClose: () =
         </span>
         <Link
           href={`/new?preset=${design.id}`}
+          prefetch={false}
           className="rounded-full bg-[var(--wd-coral)] px-4 py-1.5 text-[12px] font-medium text-white"
         >
           비슷하게 만들기 →
