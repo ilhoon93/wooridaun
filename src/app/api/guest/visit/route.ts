@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z, ZodError } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import { checkAdmin } from '@/lib/auth/admin';
 import type { Database } from '@/types/database';
 
 const BodySchema = z.object({
@@ -23,6 +24,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Validation failed', issues: e.issues }, { status: 400 });
     }
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 });
+  }
+
+  // 운영자(admin) 본인의 조회는 조회수 집계에서 제외 — 미리보기·점검 방문이
+  // 통계를 부풀리지 않게 한다. (과거 익명 기록은 소급 제외 불가, 이후분만.)
+  if (await checkAdmin()) {
+    return NextResponse.json({ success: true, skipped: 'admin' });
   }
 
   // RLS: insert allowed only for active (published, non-expired) invitations.
