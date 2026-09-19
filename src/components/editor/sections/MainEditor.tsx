@@ -207,34 +207,40 @@ export function MainEditor({ drag }: { drag?: SectionDragProps }) {
           )}
         </div>
 
-        {/* 다크 배경 테마 전용 — 이름·날짜·인사말(제목 제외)만 어둡게.
-            리본 프레임의 흰 여백처럼 밝은 요소 위에 글씨가 놓일 때 가독성 확보용. */}
-        {isDarkTheme && (
-          <div className="rounded-md border border-input bg-muted/20 px-3 py-2">
-            <ToggleRow
-              label="이름·날짜·인사말 어둡게"
-              hint="다크 배경용 — 제목은 그대로 두고 이름·날짜·인사말 글씨만 어두운 색으로."
-              checked={!!main.darkSubText}
-              // 반대 옵션(밝게)과 동시에 켜지지 않도록 상호 배타 처리.
-              onChange={(v) =>
-                patch('main', { ...main, darkSubText: v, lightSubText: v ? false : main.lightSubText })
-              }
-            />
-          </div>
-        )}
-
-        {/* 밝은(라이트) 배경 테마 전용 — 이름·날짜·인사말(제목 제외)만 밝게(흰색).
-            어두운 사진/요소 위에 글씨가 놓일 때 가독성 확보용. */}
-        {isLightTheme && (
-          <div className="rounded-md border border-input bg-muted/20 px-3 py-2">
-            <ToggleRow
-              label="이름·날짜·인사말 밝게"
-              hint="밝은 배경용 — 제목은 그대로 두고 이름·날짜·인사말 글씨만 흰색으로."
-              checked={!!main.lightSubText}
-              onChange={(v) =>
-                patch('main', { ...main, lightSubText: v, darkSubText: v ? false : main.darkSubText })
-              }
-            />
+        {/* 표시 효과 — 이름·날짜·인사말·축하하기 밝게/어둡게 + (액자형) 배경 흐리게
+            를 한 블록에 모아 정리. 제목은 그대로 두고 나머지 텍스트만 대비 색으로
+            바꿔, 밝은/어두운 사진·요소 위에서도 가독성을 확보한다. */}
+        {(isDarkTheme || isLightTheme || (isFrame && !!frame)) && (
+          <div className="flex flex-col gap-2 rounded-md border border-input bg-muted/20 px-3 py-2">
+            {isDarkTheme && (
+              <ToggleRow
+                label="이름·날짜·인사말·축하하기 어둡게"
+                hint="다크 배경용 — 제목은 그대로 두고 이름·날짜·인사말과 '축하하기' 버튼 글씨만 어두운 색으로."
+                checked={!!main.darkSubText}
+                // 반대 옵션(밝게)과 동시에 켜지지 않도록 상호 배타 처리.
+                onChange={(v) =>
+                  patch('main', { ...main, darkSubText: v, lightSubText: v ? false : main.lightSubText })
+                }
+              />
+            )}
+            {isLightTheme && (
+              <ToggleRow
+                label="이름·날짜·인사말·축하하기 밝게"
+                hint="밝은 배경용 — 제목은 그대로 두고 이름·날짜·인사말과 '축하하기' 버튼 글씨만 흰색으로."
+                checked={!!main.lightSubText}
+                onChange={(v) =>
+                  patch('main', { ...main, lightSubText: v, darkSubText: v ? false : main.darkSubText })
+                }
+              />
+            )}
+            {isFrame && frame && (
+              <ToggleRow
+                label="배경 흐리게(사진)"
+                hint="액자 바깥 배경을 업로드한 사진의 흐린 버전으로 채웁니다. 표지 사진이 있을 때만 적용돼요."
+                checked={frame.blurBackground ?? false}
+                onChange={(v) => patchFrame({ ...frame, blurBackground: v })}
+              />
+            )}
           </div>
         )}
 
@@ -444,9 +450,6 @@ export function PosterDesignControls({ design, onChange, greeting, onGreetingCha
               onChange({ ...design, dateBox: { ...design.dateBox, enabled: v } }),
           }}
         >
-          <p className="text-xs text-muted-foreground">
-            전체 디자인의 폰트와 색상을 그대로 사용합니다.
-          </p>
           {design.dateBox.enabled && (
             <>
               <SliderRow
@@ -478,9 +481,6 @@ export function PosterDesignControls({ design, onChange, greeting, onGreetingCha
               onChange({ ...design, nameBox: { ...design.nameBox, enabled: v } }),
           }}
         >
-          <p className="text-xs text-muted-foreground">
-            신랑·신부 이름만 표시됩니다. 폰트와 색상은 전체 디자인을 따릅니다.
-          </p>
           {design.nameBox.enabled && (
             <>
               <SliderRow
@@ -514,9 +514,6 @@ export function PosterDesignControls({ design, onChange, greeting, onGreetingCha
             onChange({ ...design, messageBox: { ...design.messageBox, enabled: v } }),
         }}
       >
-        <p className="text-xs text-muted-foreground">
-          폰트와 색상은 전체 디자인을 따릅니다.
-        </p>
         {design.messageBox.enabled && (
           <>
             <SliderRow
@@ -698,9 +695,6 @@ export function IllustrationDesignControls({ design, onChange, greeting, onGreet
               onChange({ ...design, dateBox: { ...design.dateBox, enabled: v } }),
           }}
         >
-          <p className="text-xs text-muted-foreground">
-            일러스트 아래 표시됩니다. 폰트·색상은 전체 디자인을 따릅니다.
-          </p>
           {design.dateBox.enabled && (
             <>
               <SliderRow
@@ -732,9 +726,6 @@ export function IllustrationDesignControls({ design, onChange, greeting, onGreet
               onChange({ ...design, nameBox: { ...design.nameBox, enabled: v } }),
           }}
         >
-          <p className="text-xs text-muted-foreground">
-            신랑·신부 이름이 일러스트 아래 표시됩니다.
-          </p>
           {design.nameBox.enabled && (
             <>
               <SliderRow
@@ -768,9 +759,6 @@ export function IllustrationDesignControls({ design, onChange, greeting, onGreet
             onChange({ ...design, messageBox: { ...design.messageBox, enabled: v } }),
         }}
       >
-        <p className="text-xs text-muted-foreground">
-          제목 바로 아래 부제 자리에 표시됩니다.
-        </p>
         {design.messageBox.enabled && (
           <>
             <SliderRow
@@ -918,9 +906,6 @@ export function TextDesignControls({ design, onChange, greeting, onGreetingChang
               onChange({ ...design, dateBox: { ...design.dateBox, enabled: v } }),
           }}
         >
-          <p className="text-xs text-muted-foreground">
-            데코 아래에 기본 위치. 상하 위치 슬라이더로 데코 위까지 올릴 수 있어요.
-          </p>
           {design.dateBox.enabled && (
             <>
               <SliderRow
@@ -952,10 +937,6 @@ export function TextDesignControls({ design, onChange, greeting, onGreetingChang
               onChange({ ...design, nameBox: { ...design.nameBox, enabled: v } }),
           }}
         >
-          <p className="text-xs text-muted-foreground">
-            데코 아래에 기본 위치. 상하 위치로 데코 위까지 올릴 수 있고, 신랑·신부
-            접두어는 표시되지 않습니다.
-          </p>
           {design.nameBox.enabled && (
             <>
               {/* 정렬 — 한 줄(점) / 위·아래(✦) / 위·아래(— ♥ —) / 한 줄+세로선(♥) */}
@@ -1013,9 +994,6 @@ export function TextDesignControls({ design, onChange, greeting, onGreetingChang
             onChange({ ...design, messageBox: { ...design.messageBox, enabled: v } }),
         }}
       >
-        <p className="text-xs text-muted-foreground">
-          제목 바로 아래 부제 자리. 상하 위치로 데코 위까지 내릴 수 있어요.
-        </p>
         {design.messageBox.enabled && (
           <>
             <SliderRow
@@ -1118,14 +1096,6 @@ export function FrameDesignControls({ design, onChange, greeting, onGreetingChan
         )}
       </div>
 
-      {/* 배경 흐리게 — 액자 바깥 배경을 업로드 사진의 흐린 버전으로 채운다(갤러리 유사). */}
-      <ToggleRow
-        label="배경 흐리게(사진)"
-        hint="액자 바깥 배경을 업로드한 사진의 흐린 버전으로 채웁니다. 표지 사진이 있을 때만 적용돼요."
-        checked={design.blurBackground ?? false}
-        onChange={(v) => onChange({ ...design, blurBackground: v })}
-      />
-
       {/* 제목 텍스트 — 토글 + 문구 + 폰트 + 색 + 크기 + 상하 위치 */}
       <Group
         label="제목 텍스트"
@@ -1201,9 +1171,6 @@ export function FrameDesignControls({ design, onChange, greeting, onGreetingChan
               onChange({ ...design, dateBox: { ...design.dateBox, enabled: v } }),
           }}
         >
-          <p className="text-xs text-muted-foreground">
-            폰트와 색상은 전체 디자인을 따릅니다.
-          </p>
           {design.dateBox.enabled && (
             <>
               <SliderRow
@@ -1235,9 +1202,6 @@ export function FrameDesignControls({ design, onChange, greeting, onGreetingChan
               onChange({ ...design, nameBox: { ...design.nameBox, enabled: v } }),
           }}
         >
-          <p className="text-xs text-muted-foreground">
-            신랑·신부 이름이 표시됩니다.
-          </p>
           {design.nameBox.enabled && (
             <>
               <SliderRow
@@ -1271,9 +1235,6 @@ export function FrameDesignControls({ design, onChange, greeting, onGreetingChan
             onChange({ ...design, messageBox: { ...design.messageBox, enabled: v } }),
         }}
       >
-        <p className="text-xs text-muted-foreground">
-          폰트와 색상은 전체 디자인을 따릅니다.
-        </p>
         {design.messageBox.enabled && (
           <>
             <SliderRow

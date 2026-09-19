@@ -57,7 +57,7 @@ export function AccountEditor({ drag }: { drag?: SectionDragProps }) {
     <SectionEditor
       drag={drag}
       title="축의금 계좌"
-      description="안내문구 + 신랑·신부·부모님별 계좌 (각 최대 3개)"
+      description="신랑·신부·부모님별 계좌 (각 최대 3개) · 계좌를 추가하지 않은 항목은 알림장에 표시되지 않습니다"
       toggle={{
         enabled: account.enabled,
         onChange: (next) => patch('account', { ...account, enabled: next }),
@@ -75,11 +75,6 @@ export function AccountEditor({ drag }: { drag?: SectionDragProps }) {
           presets={ACCOUNT_GUIDE_PRESETS}
           presetLabel="추천 안내문구"
         />
-
-        {/* 안내문구는 상단에 1번만 — 각 PartyEditor 의 빈 상태 메시지 중복 제거. */}
-        <p className="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-          ※ 계좌를 추가하지 않은 항목은 알림장에 표시되지 않습니다.
-        </p>
 
         {/* 표시 방식 — 기본(끔)은 신랑측/신부측 탭 분리, 켜면 한 화면에 함께. */}
         <label className="flex items-start gap-2 rounded-md border bg-background px-3 py-2.5">
