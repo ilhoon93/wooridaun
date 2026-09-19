@@ -215,12 +215,18 @@ function CelebrationFooter({
   cheersCount,
   onCelebrate,
   inverse,
-}: CelebrationFooterProps & { inverse?: boolean }) {
+  color,
+}: CelebrationFooterProps & { inverse?: boolean; color?: string }) {
   // poster fullImage / 가로 스크린 처럼 어두운 오버레이 위에 띄울 땐 inverse=true 로 흰색 톤.
+  // color: 이름·날짜·인사말 밝게/어둡게(subText) 옵션과 동일한 색을 축하하기에도 적용.
   const baseColor = inverse ? 'text-white' : '';
+  const colorStyle = color ? { color } : undefined;
   if (mode === 'owner') {
     return (
-      <div className={`flex flex-col items-center text-xs font-medium opacity-80 ${baseColor}`}>
+      <div
+        className={`flex flex-col items-center text-xs font-medium opacity-80 ${baseColor}`}
+        style={colorStyle}
+      >
         <span aria-hidden className="text-base leading-none">🎉</span>
         <span className="mt-1">
           총 <span className="font-semibold">{cheersCount.toLocaleString()}</span>번의 축하가 터졌습니다
@@ -233,6 +239,7 @@ function CelebrationFooter({
       type="button"
       onClick={onCelebrate}
       className={`inline-flex items-center gap-1.5 text-xs font-medium opacity-80 transition-opacity hover:opacity-100 ${baseColor}`}
+      style={colorStyle}
     >
       <span className="underline underline-offset-4">축하하기</span>
       <span aria-hidden className="text-base leading-none">🎉</span>
@@ -651,6 +658,7 @@ function IllustrationSlide({
           mode={mode}
           cheersCount={cheersCount}
           onCelebrate={onCelebrate}
+          color={subColor}
         />
       </div>
 
@@ -889,6 +897,7 @@ function TextLayoutSlide({
           mode={mode}
           cheersCount={cheersCount}
           onCelebrate={onCelebrate}
+          color={subColor}
         />
       </div>
 
@@ -1386,6 +1395,7 @@ function FrameSlide({
           cheersCount={cheersCount}
           onCelebrate={onCelebrate}
           inverse={isScreen}
+          color={subColor}
         />
       </div>
 

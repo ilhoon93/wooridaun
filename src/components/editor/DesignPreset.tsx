@@ -48,9 +48,6 @@ export function DesignPreset({
     if (!c) return null;
     return sigOf(c.theme.colorTheme, c.theme.petalType, c.theme.font, c.main);
   });
-  const usesSamplePhoto = useEditorStore(
-    (s) => !!s.content?.main.heroImage?.includes(SAMPLE_PHOTO_MARK),
-  );
 
   // 사진 있는 / 없는 두 그룹 — 관리자 샘플 설정 분류(hasPhoto)와 동일.
   const photo = useMemo(() => designs.filter((d) => d.hasPhoto), [designs]);
@@ -210,12 +207,6 @@ export function DesignPreset({
         <div className="mt-2 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
           {(view === 'photo' ? photo : nophoto).map(renderCard)}
         </div>
-      )}
-      {usesSamplePhoto && (
-        <p className="mt-2 rounded-md bg-amber-50 px-2.5 py-1.5 text-[11px] leading-tight text-amber-900 ring-1 ring-amber-200">
-          지금 메인 사진은 <strong>샘플 사진</strong>이에요. 아래 &ldquo;메인 화면&rdquo;에서 내
-          사진으로 바꿔 발행해주세요.
-        </p>
       )}
     </div>
   );

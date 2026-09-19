@@ -15,7 +15,7 @@ export function GuestbookEditor({ drag }: { drag?: SectionDragProps }) {
     <SectionEditor
       drag={drag}
       title="방명록"
-      description="하객 메시지는 신랑신부에게만 전달됩니다"
+      description="하객이 남긴 메시지는 두 분에게만 전달되며, 다른 하객에게는 노출되지 않습니다."
       toggle={{
         enabled: guestbook.enabled,
         onChange: (next) => patch('guestbook', { ...guestbook, enabled: next }),
@@ -35,10 +35,6 @@ export function GuestbookEditor({ drag }: { drag?: SectionDragProps }) {
           presets={GUESTBOOK_GREETING_PRESETS}
           presetLabel="추천 인사말"
         />
-        <p className="rounded-md border border-dashed bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-          하객이 남긴 메시지는 두 분에게만 전달되며, 다른 하객에게는 노출되지
-          않습니다.
-        </p>
       </div>
     </SectionEditor>
   );
