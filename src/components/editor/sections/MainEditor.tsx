@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { PortalPanel } from '@/components/editor/PortalPanel';
 import {
@@ -112,6 +112,43 @@ export function MainEditor({ drag }: { drag?: SectionDragProps }) {
   const patchText = (next: TextDesign) => patch('main', { ...main, textDesign: next });
   const patchFrame = (next: FrameDesign) => patch('main', { ...main, frameDesign: next });
 
+  // 표시 효과 — 이름·날짜·인사말·축하하기 밝게/어둡게 + (액자형) 배경 흐리게.
+  // 각 레이아웃의 "제목 텍스트" 바로 아래에 노출하도록 effectSlot 으로 전달한다.
+  const displayEffects =
+    isDarkTheme || isLightTheme || (isFrame && !!frame) ? (
+      <div className="flex flex-col gap-2 rounded-md border border-input bg-muted/20 px-3 py-2">
+        {isDarkTheme && (
+          <ToggleRow
+            label="이름·날짜·인사말·축하하기 어둡게"
+            hint="다크 배경용 — 제목은 그대로 두고 이름·날짜·인사말과 '축하하기' 버튼 글씨만 어두운 색으로."
+            checked={!!main.darkSubText}
+            // 반대 옵션(밝게)과 동시에 켜지지 않도록 상호 배타 처리.
+            onChange={(v) =>
+              patch('main', { ...main, darkSubText: v, lightSubText: v ? false : main.lightSubText })
+            }
+          />
+        )}
+        {isLightTheme && (
+          <ToggleRow
+            label="이름·날짜·인사말·축하하기 밝게"
+            hint="밝은 배경용 — 제목은 그대로 두고 이름·날짜·인사말과 '축하하기' 버튼 글씨만 흰색으로."
+            checked={!!main.lightSubText}
+            onChange={(v) =>
+              patch('main', { ...main, lightSubText: v, darkSubText: v ? false : main.darkSubText })
+            }
+          />
+        )}
+        {isFrame && frame && (
+          <ToggleRow
+            label="배경 흐리게(사진)"
+            hint="액자 바깥 배경을 업로드한 사진의 흐린 버전으로 채웁니다. 표지 사진이 있을 때만 적용돼요."
+            checked={frame.blurBackground ?? false}
+            onChange={(v) => patchFrame({ ...frame, blurBackground: v })}
+          />
+        )}
+      </div>
+    ) : null;
+
   return (
     <SectionEditor drag={drag} title="메인 화면" description="첫 슬라이드의 레이아웃과 인사말">
       <div className="flex flex-col gap-4">
@@ -153,8 +190,7 @@ export function MainEditor({ drag }: { drag?: SectionDragProps }) {
               <div className="rounded-md border border-dashed border-input bg-muted/30 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
                 <p className="mb-1 font-medium text-foreground">액자 프레임 팁</p>
                 <ul className="list-disc space-y-0.5 pl-4">
-                  <li>폴라로이드·하트·아치·클래식·아래 사진·위 사진은 사진을 프레임에 맞춰 자릅니다 — 이미지 위치로 보일 영역을 고르세요.</li>
-                  <li>스크린은 세로 사진이면 정사각형으로 잘려(위치 조정 가능), 가로 사진이면 전체가 그대로 보여요.</li>
+                  <li>액자 프레임은 사진을 프레임에 맞춰 자릅니다. 이미지 위치로 보일 영역을 고르세요.</li>
                   <li>미리보기에는 실제 알림장에 보일 영역만 나타납니다.</li>
                 </ul>
               </div>
@@ -207,49 +243,13 @@ export function MainEditor({ drag }: { drag?: SectionDragProps }) {
           )}
         </div>
 
-        {/* 표시 효과 — 이름·날짜·인사말·축하하기 밝게/어둡게 + (액자형) 배경 흐리게
-            를 한 블록에 모아 정리. 제목은 그대로 두고 나머지 텍스트만 대비 색으로
-            바꿔, 밝은/어두운 사진·요소 위에서도 가독성을 확보한다. */}
-        {(isDarkTheme || isLightTheme || (isFrame && !!frame)) && (
-          <div className="flex flex-col gap-2 rounded-md border border-input bg-muted/20 px-3 py-2">
-            {isDarkTheme && (
-              <ToggleRow
-                label="이름·날짜·인사말·축하하기 어둡게"
-                hint="다크 배경용 — 제목은 그대로 두고 이름·날짜·인사말과 '축하하기' 버튼 글씨만 어두운 색으로."
-                checked={!!main.darkSubText}
-                // 반대 옵션(밝게)과 동시에 켜지지 않도록 상호 배타 처리.
-                onChange={(v) =>
-                  patch('main', { ...main, darkSubText: v, lightSubText: v ? false : main.lightSubText })
-                }
-              />
-            )}
-            {isLightTheme && (
-              <ToggleRow
-                label="이름·날짜·인사말·축하하기 밝게"
-                hint="밝은 배경용 — 제목은 그대로 두고 이름·날짜·인사말과 '축하하기' 버튼 글씨만 흰색으로."
-                checked={!!main.lightSubText}
-                onChange={(v) =>
-                  patch('main', { ...main, lightSubText: v, darkSubText: v ? false : main.darkSubText })
-                }
-              />
-            )}
-            {isFrame && frame && (
-              <ToggleRow
-                label="배경 흐리게(사진)"
-                hint="액자 바깥 배경을 업로드한 사진의 흐린 버전으로 채웁니다. 표지 사진이 있을 때만 적용돼요."
-                checked={frame.blurBackground ?? false}
-                onChange={(v) => patchFrame({ ...frame, blurBackground: v })}
-              />
-            )}
-          </div>
-        )}
-
         {isPoster && design && (
           <PosterDesignControls
             design={design}
             onChange={patchDesign}
             greeting={main.greeting}
             onGreetingChange={(greeting) => patch('main', { ...main, greeting })}
+            effectSlot={displayEffects}
           />
         )}
 
@@ -259,6 +259,7 @@ export function MainEditor({ drag }: { drag?: SectionDragProps }) {
             onChange={patchIllust}
             greeting={main.greeting}
             onGreetingChange={(greeting) => patch('main', { ...main, greeting })}
+            effectSlot={displayEffects}
           />
         )}
 
@@ -268,6 +269,7 @@ export function MainEditor({ drag }: { drag?: SectionDragProps }) {
             onChange={patchText}
             greeting={main.greeting}
             onGreetingChange={(greeting) => patch('main', { ...main, greeting })}
+            effectSlot={displayEffects}
           />
         )}
 
@@ -277,6 +279,7 @@ export function MainEditor({ drag }: { drag?: SectionDragProps }) {
             onChange={patchFrame}
             greeting={main.greeting}
             onGreetingChange={(greeting) => patch('main', { ...main, greeting })}
+            effectSlot={displayEffects}
           />
         )}
 
@@ -296,9 +299,11 @@ interface DesignProps {
   onChange: (next: PosterDesign) => void;
   greeting: string;
   onGreetingChange: (next: string) => void;
+  /** 제목 텍스트 아래에 끼워 넣을 "표시 효과"(밝게/어둡게·배경흐리게) 블록. */
+  effectSlot?: ReactNode;
 }
 
-export function PosterDesignControls({ design, onChange, greeting, onGreetingChange }: DesignProps) {
+export function PosterDesignControls({ design, onChange, greeting, onGreetingChange, effectSlot }: DesignProps) {
   const handleReset = () => {
     onChange(PosterDesignSchema.parse(undefined));
   };
@@ -439,6 +444,9 @@ export function PosterDesignControls({ design, onChange, greeting, onGreetingCha
           }
         />
       </Group>
+
+      {/* 표시 효과(밝게/어둡게·배경흐리게) — 제목 텍스트 바로 아래 */}
+      {effectSlot}
 
       {/* 3 + 4. 날짜 + 이름 — 같은 행에 나란히 (sm+). */}
       <div className="grid items-start gap-3 sm:grid-cols-2">
@@ -598,6 +606,8 @@ interface IllustProps {
   onChange: (next: IllustrationDesign) => void;
   greeting: string;
   onGreetingChange: (next: string) => void;
+  /** 제목 텍스트 아래에 끼워 넣을 "표시 효과"(밝게/어둡게·배경흐리게) 블록. */
+  effectSlot?: ReactNode;
 }
 
 const ILLUST_VARIANT_LABELS: Record<IllustrationVariant, { name: string; hint: string }> = {
@@ -608,7 +618,7 @@ const ILLUST_VARIANT_LABELS: Record<IllustrationVariant, { name: string; hint: s
   car: { name: '웨딩 카', hint: 'MARRIED 사인 + 자동차에 탄 커플' },
 };
 
-export function IllustrationDesignControls({ design, onChange, greeting, onGreetingChange }: IllustProps) {
+export function IllustrationDesignControls({ design, onChange, greeting, onGreetingChange, effectSlot }: IllustProps) {
   const handleReset = () => {
     // variant 는 "타입" 선택이라 보존, 디자인 항목만 기본값으로.
     const defaults = IllustrationDesignSchema.parse(undefined);
@@ -684,6 +694,9 @@ export function IllustrationDesignControls({ design, onChange, greeting, onGreet
           }
         />
       </Group>
+
+      {/* 표시 효과(밝게/어둡게·배경흐리게) — 제목 텍스트 바로 아래 */}
+      {effectSlot}
 
       {/* 날짜 + 이름 — 같은 행에 나란히 (sm+). */}
       <div className="grid items-start gap-3 sm:grid-cols-2">
@@ -806,6 +819,8 @@ interface TextProps {
   onChange: (next: TextDesign) => void;
   greeting: string;
   onGreetingChange: (next: string) => void;
+  /** 제목 텍스트 아래에 끼워 넣을 "표시 효과"(밝게/어둡게·배경흐리게) 블록. */
+  effectSlot?: ReactNode;
 }
 
 const TEXT_VARIANT_LABELS: Record<TextVariant, { name: string; hint: string }> = {
@@ -818,7 +833,7 @@ const TEXT_VARIANT_LABELS: Record<TextVariant, { name: string; hint: string }> =
   none: { name: '없음', hint: '데코 이미지 없이 텍스트만' },
 };
 
-export function TextDesignControls({ design, onChange, greeting, onGreetingChange }: TextProps) {
+export function TextDesignControls({ design, onChange, greeting, onGreetingChange, effectSlot }: TextProps) {
   const handleReset = () => {
     // variant 는 "타입" 선택이라 보존, 디자인 항목만 기본값으로.
     const defaults = TextDesignSchema.parse(undefined);
@@ -894,6 +909,9 @@ export function TextDesignControls({ design, onChange, greeting, onGreetingChang
           }
         />
       </Group>
+
+      {/* 표시 효과(밝게/어둡게·배경흐리게) — 제목 텍스트 바로 아래 */}
+      {effectSlot}
 
       {/* 날짜 + 이름 — 같은 행에 나란히 (sm+). 이름은 정렬/순서/크기/위치 컨트롤이
           더 많아 카드 높이가 살짝 다를 수 있어 items-start 로 상단 정렬. */}
@@ -1041,6 +1059,8 @@ interface FrameProps {
   onChange: (next: FrameDesign) => void;
   greeting: string;
   onGreetingChange: (next: string) => void;
+  /** 제목 텍스트 아래에 끼워 넣을 "표시 효과"(밝게/어둡게·배경흐리게) 블록. */
+  effectSlot?: ReactNode;
 }
 
 const FRAME_VARIANT_LABELS: Record<FrameVariant, { name: string; hint: string }> = {
@@ -1053,7 +1073,7 @@ const FRAME_VARIANT_LABELS: Record<FrameVariant, { name: string; hint: string }>
   photoTop: { name: '위 사진', hint: '아래쪽 여백 + 위를 사진으로 채움' },
 };
 
-export function FrameDesignControls({ design, onChange, greeting, onGreetingChange }: FrameProps) {
+export function FrameDesignControls({ design, onChange, greeting, onGreetingChange, effectSlot }: FrameProps) {
   const handleReset = () => {
     // variant 는 "타입" 선택이라 보존, 디자인 항목만 기본값으로.
     const defaults = FrameDesignSchema.parse(undefined);
@@ -1160,6 +1180,9 @@ export function FrameDesignControls({ design, onChange, greeting, onGreetingChan
           </>
         )}
       </Group>
+
+      {/* 표시 효과(밝게/어둡게·배경흐리게) — 제목 텍스트 바로 아래 */}
+      {effectSlot}
 
       {/* 날짜 + 이름 — 같은 행에 나란히 (sm+). */}
       <div className="grid items-start gap-3 sm:grid-cols-2">
