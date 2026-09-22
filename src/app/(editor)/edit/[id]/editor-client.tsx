@@ -141,6 +141,7 @@ export function EditorClient({
               <span className="text-sm font-medium text-[var(--wd-ink)]">기본 편집</span>
               <EditorActions />
             </div>
+            <SaveErrorNotice />
           </div>
 
           <main className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-6 pb-32 lg:max-w-none lg:px-0 lg:py-4">
@@ -436,6 +437,26 @@ const STATUS_COLOR = {
 } as const;
 
 /**
+ * 저장 실패 시에만 노출되는 안내 배너. 모바일에선 상태 텍스트의 title(툴팁)이
+ * 동작하지 않아 "왜 실패했는지·무엇을 하면 되는지" 가 안 보였다 — 저장 로직은
+ * 그대로 두고 표시만 보강한다(자동저장 재도입 아님).
+ */
+function SaveErrorNotice() {
+  const status = useEditorStore((s) => s.status);
+  const lastError = useEditorStore((s) => s.lastError);
+  if (status !== 'error') return null;
+  return (
+    <div
+      role="alert"
+      className="border-t border-red-200 bg-red-50 px-3 py-2 text-[12px] leading-snug text-red-700"
+    >
+      저장에 실패했어요. 인터넷 연결을 확인한 뒤 <b>‘저장’</b>을 다시 눌러주세요.
+      {lastError ? <span className="text-red-500"> ({lastError})</span> : null}
+    </div>
+  );
+}
+
+/**
  * 탭 strip 우측에 정렬되는 에디터 액션 — 상태 / 저장 / 미리보기.
  * 기존 EditorToolbar 의 로직(저장 race, preview 캐시 무효화) 그대로 이식.
  */
@@ -467,7 +488,7 @@ function EditorActions() {
   return (
     <div className="flex flex-shrink-0 items-center gap-2">
       <span
-        className={`hidden text-[11px] sm:inline-block ${STATUS_COLOR[status]}`}
+        className={`text-[11px] ${STATUS_COLOR[status]}`}
         title={lastError ?? undefined}
       >
         {STATUS_LABEL[status]}
