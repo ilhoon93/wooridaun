@@ -37,9 +37,38 @@ import type {
 } from '@/lib/marketing/sample-invitations';
 
 export const metadata: Metadata = {
-  title: '우리다운 — 노웨딩·스몰웨딩 커플을 위한 결혼 알림장',
+  title: '노웨딩 결혼알림장 무료 제작 | 우리다운',
   description:
-    '예식 없이도 우리의 소식을 전해요. 노웨딩·스몰웨딩 커플을 위한 감성 모바일 알림장 + AI 웨딩스냅.',
+    '예식 없이도, 우리의 소식을 전해요. 사진 한 장으로 완성하는 노웨딩·스몰웨딩 결혼알림장 — 발행 전까지 무료, 카톡으로 바로 공유.',
+};
+
+const HOME_URL = (process.env.NEXT_PUBLIC_BASE_URL || 'https://wooridaun.com').replace(/\/$/, '');
+const HOME_JSON_LD = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'Organization',
+      '@id': `${HOME_URL}/#organization`,
+      name: '우리다운',
+      url: `${HOME_URL}/`,
+      logo: `${HOME_URL}/icon.png`,
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${HOME_URL}/#website`,
+      name: '우리다운',
+      url: `${HOME_URL}/`,
+      inLanguage: 'ko-KR',
+      publisher: { '@id': `${HOME_URL}/#organization` },
+    },
+    {
+      '@type': 'WebPage',
+      url: `${HOME_URL}/`,
+      name: '노웨딩 결혼알림장 무료 제작 | 우리다운',
+      primaryImageOfPage: `${HOME_URL}/og.png?v=2`,
+      isPartOf: { '@id': `${HOME_URL}/#website` },
+    },
+  ],
 };
 
 // 카탈로그가 admin 토글로 즉시 반영되도록 dynamic — wedding-snap 페이지와 동일 정책.
@@ -82,6 +111,11 @@ export default async function LandingPage() {
 
   return (
     <>
+      {/* 검색엔진용 구조화 데이터(화면 비노출) — 사이트명·로고·대표 이미지 인식 보강. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(HOME_JSON_LD) }}
+      />
       <SiteVisitTracker />
       <Hero aiSnaps={home.aiSnaps} designs={home.designs} />
       <SocialProof
