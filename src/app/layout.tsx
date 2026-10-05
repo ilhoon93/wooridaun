@@ -338,8 +338,10 @@ const koreanFontVariables = [
 ];
 
 const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://wooridaun.com';
+// 검색 결과(네이버·구글) 제목 — 검색어(노웨딩·결혼알림장)를 앞에 두고 '무료 제작' 으로 클릭 유도.
+const SITE_TITLE = '노웨딩 결혼알림장 무료 제작 | 우리다운';
 const SITE_DESCRIPTION =
-  '예식 없이도 우리의 소식을 전해요. 노웨딩·스몰웨딩 커플을 위한 감성 모바일 알림장 + AI 웨딩스냅.';
+  '예식 없이도, 우리의 소식을 전해요. 사진 한 장으로 완성하는 노웨딩·스몰웨딩 결혼알림장 — 발행 전까지 무료, 카톡으로 바로 공유.';
 // 네이버 서치어드바이저 소유확인 코드. env 로 덮어쓸 수 있게 두되, 기본값은 발급받은 값.
 const NAVER_SITE_VERIFICATION =
   process.env.NEXT_PUBLIC_NAVER_SITE_VERIFICATION || '7c40119dd978db4459642411d1798757c47aa286';
@@ -350,26 +352,26 @@ export const metadata: Metadata = {
   // 상대 경로(OG 이미지·canonical 등)를 절대 URL 로 해석할 기준. 공유 카드 이미지가
   // 절대 URL 이어야 카카오/네이버/구글 미리보기가 정상 노출됨.
   metadataBase: new URL(SITE_URL),
-  title: '우리다운 — 노웨딩·스몰웨딩 커플을 위한 결혼 알림장',
+  title: SITE_TITLE,
   description: SITE_DESCRIPTION,
   // 사이트 기본 OG — 마케팅 페이지(/, /designs, /wedding-snap)는 자체 openGraph 가 없어
   // 이 값을 상속한다. 공유 이미지는 public/og.png (1200×630).
   openGraph: {
-    title: '우리다운 — 노웨딩·스몰웨딩 커플을 위한 결혼 알림장',
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
     url: SITE_URL,
     siteName: '우리다운',
     images: [
-      { url: '/og.png', width: 1200, height: 630, alt: '우리다운 — 모바일 알림장 + AI 웨딩스냅' },
+      { url: '/og.png?v=2', width: 1200, height: 630, alt: '우리다운 — 노웨딩·스몰웨딩 모바일 결혼알림장' },
     ],
     locale: 'ko_KR',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: '우리다운 — 노웨딩·스몰웨딩 커플을 위한 결혼 알림장',
+    title: SITE_TITLE,
     description: SITE_DESCRIPTION,
-    images: ['/og.png'],
+    images: ['/og.png?v=2'],
   },
   // 네이버 서치어드바이저 + 구글 서치 콘솔 소유확인 메타태그를 홈 <head> 에 출력.
   // 각각 env 로 덮어쓸 수 있고, 미설정 시 발급받은 기본값 사용.
