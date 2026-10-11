@@ -338,8 +338,8 @@ const koreanFontVariables = [
 ];
 
 const SITE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://wooridaun.com';
-// 검색 결과(네이버·구글) 제목 — 검색어(노웨딩·결혼알림장)를 앞에 두고 '무료 제작' 으로 클릭 유도.
-const SITE_TITLE = '노웨딩 결혼알림장 무료 제작 | 우리다운';
+// 검색 결과(네이버·구글) 제목 — 검색어(노웨딩·스몰웨딩·결혼알림장)를 앞에 둔다.
+const SITE_TITLE = '노웨딩·스몰웨딩 결혼알림장 | 우리다운';
 const SITE_DESCRIPTION =
   '예식 없이도, 우리의 소식을 전해요. 사진 한 장으로 완성하는 노웨딩·스몰웨딩 결혼알림장 — 발행 전까지 무료, 카톡으로 바로 공유.';
 // 네이버 서치어드바이저 소유확인 코드. env 로 덮어쓸 수 있게 두되, 기본값은 발급받은 값.
