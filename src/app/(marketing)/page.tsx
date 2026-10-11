@@ -37,7 +37,7 @@ import type {
 } from '@/lib/marketing/sample-invitations';
 
 export const metadata: Metadata = {
-  title: '노웨딩 결혼알림장 무료 제작 | 우리다운',
+  title: '노웨딩·스몰웨딩 결혼알림장 | 우리다운',
   description:
     '예식 없이도, 우리의 소식을 전해요. 사진 한 장으로 완성하는 노웨딩·스몰웨딩 결혼알림장 — 발행 전까지 무료, 카톡으로 바로 공유.',
 };
@@ -64,7 +64,7 @@ const HOME_JSON_LD = {
     {
       '@type': 'WebPage',
       url: `${HOME_URL}/`,
-      name: '노웨딩 결혼알림장 무료 제작 | 우리다운',
+      name: '노웨딩·스몰웨딩 결혼알림장 | 우리다운',
       primaryImageOfPage: `${HOME_URL}/og.png?v=2`,
       isPartOf: { '@id': `${HOME_URL}/#website` },
     },
