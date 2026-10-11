@@ -36,10 +36,34 @@ import type {
   SampleDesign,
 } from '@/lib/marketing/sample-invitations';
 
+const HOME_TITLE = '노웨딩·스몰웨딩 결혼알림장 | 우리다운';
+const HOME_DESCRIPTION =
+  '예식 없이도, 우리의 소식을 전해요. 사진 한 장으로 완성하는 노웨딩·스몰웨딩 결혼알림장 — 발행 전까지 무료, 카톡으로 바로 공유.';
+// 홈 전용 대표 이미지. 네이버는 여러 페이지에 반복되는 이미지·홍보 배너성 이미지를
+// 대표 썸네일로 쓰지 않을 수 있어, 다른 페이지가 공유하는 og.png 와 분리한다.
+const HOME_OG_IMAGE = '/og-home.jpg';
+
 export const metadata: Metadata = {
-  title: '노웨딩·스몰웨딩 결혼알림장 | 우리다운',
-  description:
-    '예식 없이도, 우리의 소식을 전해요. 사진 한 장으로 완성하는 노웨딩·스몰웨딩 결혼알림장 — 발행 전까지 무료, 카톡으로 바로 공유.',
+  title: HOME_TITLE,
+  description: HOME_DESCRIPTION,
+  // 페이지에서 openGraph 를 지정하면 루트 값을 통째로 대체하므로 전체 필드를 다시 적는다.
+  openGraph: {
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
+    url: '/',
+    siteName: '우리다운',
+    images: [
+      { url: HOME_OG_IMAGE, width: 1000, height: 1000, alt: '우리다운 모바일 결혼알림장 디자인 예시' },
+    ],
+    locale: 'ko_KR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
+    images: [HOME_OG_IMAGE],
+  },
 };
 
 const HOME_URL = (process.env.NEXT_PUBLIC_BASE_URL || 'https://wooridaun.com').replace(/\/$/, '');
@@ -64,8 +88,8 @@ const HOME_JSON_LD = {
     {
       '@type': 'WebPage',
       url: `${HOME_URL}/`,
-      name: '노웨딩·스몰웨딩 결혼알림장 | 우리다운',
-      primaryImageOfPage: `${HOME_URL}/og.png?v=2`,
+      name: HOME_TITLE,
+      primaryImageOfPage: `${HOME_URL}${HOME_OG_IMAGE}`,
       isPartOf: { '@id': `${HOME_URL}/#website` },
     },
   ],
