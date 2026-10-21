@@ -147,6 +147,42 @@ export function ThemeEditor() {
           </span>
         </button>
 
+        {/* 넘기기 방식 — 가로(기본, 좌우 스와이프) / 세로(위아래로 이어지는 스크롤). */}
+        <div className="flex flex-col gap-2 rounded-md border border-input px-3 py-2.5">
+          <span className="flex flex-col">
+            <span className="text-sm font-medium text-foreground">넘기기 방식</span>
+            <span className="mt-0.5 text-[11px] leading-tight text-muted-foreground">
+              가로는 옆으로 넘기고, 세로는 위아래로 이어서 스크롤해요.
+            </span>
+          </span>
+          <div role="radiogroup" aria-label="넘기기 방식" className="grid grid-cols-2 gap-2">
+            {(
+              [
+                { value: 'horizontal', label: '가로로 넘기기' },
+                { value: 'vertical', label: '세로로 스크롤' },
+              ] as const
+            ).map((opt) => {
+              const selected = (theme.slideDirection ?? 'horizontal') === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setTheme({ ...theme, slideDirection: opt.value })}
+                  className={`h-9 rounded-md border text-sm transition-colors ${
+                    selected
+                      ? 'border-foreground bg-foreground text-background'
+                      : 'border-input bg-background text-foreground hover:bg-muted'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* 배경 음악 */}
         <BgmField
           invitationId={invitationId}
