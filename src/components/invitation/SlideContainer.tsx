@@ -130,7 +130,7 @@ export function SlideContainer({
     const root = scrollerRef.current;
     if (!root) return;
     let raf = 0;
-    // 현재 위치(점 표시용) — 화면 위쪽 40% 지점을 지난 마지막 슬라이드.
+    // 현재 위치(첫 화면 '아래로' 안내 표시 여부용) — 화면 위쪽 40% 지점을 지난 마지막 슬라이드.
     const onScroll = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
@@ -149,7 +149,7 @@ export function SlideContainer({
     };
   }, [isVertical, slidesLen]);
 
-  // 세로 모드의 점 클릭 — scrollIntoView 는 바깥 페이지(에디터)까지 스크롤할 수 있어
+  // 세로 모드의 '아래로' 안내 클릭 — scrollIntoView 는 바깥 페이지(에디터)까지 스크롤할 수 있어
   // 스크롤러 안에서만 이동시킨다.
   const scrollToSlide = (i: number) => {
     const root = scrollerRef.current;
@@ -292,25 +292,6 @@ export function SlideContainer({
       >
         <FallingPetals type={petalType} colors={palette.petals} />
       </div>
-
-      {/* 오른쪽 세로 점 표시 */}
-      {slidesLen > 1 && (
-        <div className="pointer-events-none absolute right-2 top-1/2 z-20 flex -translate-y-1/2 flex-col gap-1.5">
-          {slides.map((_, i) => (
-            <button
-              key={i}
-              type="button"
-              onClick={() => scrollToSlide(i)}
-              aria-label={`${i + 1}번 슬라이드로 이동`}
-              className="pointer-events-auto w-1.5 rounded-full transition-all"
-              style={{
-                height: i === index ? 20 : 6,
-                backgroundColor: i === index ? palette.accent : palette.dot,
-              }}
-            />
-          ))}
-        </div>
-      )}
 
       {/* 첫 화면 하단 "아래로" 안내 — 내려가기 시작하면 사라진다. */}
       {slidesLen > 1 && (
