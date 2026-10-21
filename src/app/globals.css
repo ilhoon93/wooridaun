@@ -306,6 +306,34 @@
   background: transparent;
 }
 
+/* 알림장 슬라이드 스크롤바 숨김 — 스크롤은 그대로, 막대만 감춘다(SlideContainer 전용). */
+.wd-hide-scroll {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* 구 Edge */
+}
+.wd-hide-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* 세로 넘기기 모드의 슬라이드 박스 — 최소 한 화면 높이(flex column)에서 슬라이드
+ * 루트 섹션이 남는 높이를 채우도록 늘린다. 섹션의 min-h-full/h-full 은 부모 높이가
+ * 확정값이 아니라 동작하지 않으므로 flex-grow 로 대신한다(가운데 정렬 유지). */
+.wd-vslide > :first-child {
+  flex: 1 0 auto;
+}
+
+/* 세로 모드 첫 화면 "아래로" 안내 화살표 */
+@keyframes wd-bounce-y {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, 6px); }
+}
+.wd-bounce-y {
+  animation: wd-bounce-y 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wd-bounce-y { animation: none; }
+}
+
 /* ─────────────────────────────────────────────────────────────
  * 혼주용 큰 글씨 모드 (theme.hostMode)
  * SlideContainer 루트에 .wd-host-text 가 붙으면, 본문(정보 슬라이드)의 rem 기반

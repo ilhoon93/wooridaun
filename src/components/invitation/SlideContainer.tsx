@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState, type ReactNode } from 'react';
+import React, { useEffect, useRef, useState, type ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { FallingPetals } from '@/components/shared/FallingPetals';
 import { BgmPlayer } from './BgmPlayer';
@@ -56,6 +56,12 @@ interface Props {
    * 미지정 시 전부 'none'.
    */
   slideReveal?: Array<'none' | 'stagger' | 'together' | 'account'>;
+  /**
+   * 넘기기 방식. 'horizontal'(기본) = 좌우 스와이프 트랙.
+   * 'vertical' = 위아래로 이어지는 스크롤(스크롤 스냅). 첫 슬라이드(표지)는 한 화면
+   * 높이로 고정하고, 나머지는 최소 한 화면 + 내용만큼 늘어나 슬라이드 내부 스크롤이 없다.
+   */
+  direction?: 'horizontal' | 'vertical';
 }
 
 export function SlideContainer({
@@ -70,7 +76,9 @@ export function SlideContainer({
   manualBgm = false,
   hostMode = false,
   slideReveal,
+  direction = 'horizontal',
 }: Props) {
+  const isVertical = direction === 'vertical';
   const slides = children.filter(Boolean);
   const [index, setIndex] = useState(0);
   // 스와이프(가로 트랙 이동)가 끝나 "정착"한 슬라이드 인덱스. 전환 효과가 켜진
@@ -84,6 +92,70 @@ export function SlideContainer({
 
   const slidesLen = slides.length;
   const startRef = useRef<{ x: number; y: number } | null>(null);
+
+  // ── 세로 모드 전용 ────────────────────────────────────────
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const slideRefs = useRef<Array<HTMLDivElement | null>>([]);
+  // 한 번 화면에 들어온 슬라이드 — 세로 모드에선 위로 되돌아가도 다시 숨기지 않는다.
+  const [revealed, setRevealed] = useState<ReadonlySet<number>>(() => new Set([0]));
+
+  useEffect(() => {
+    if (!isVertical) return;
+    const root = scrollerRef.current;
+    if (!root || typeof IntersectionObserver === 'undefined') return;
+    // 슬라이드 윗부분이 화면 아래쪽 35% 선을 넘어 들어오면 등장 효과 시작.
+    const io = new IntersectionObserver(
+      (entries) => {
+        setRevealed((prev) => {
+          let next = prev;
+          for (const e of entries) {
+            if (!e.isIntersecting) continue;
+            const i = Number((e.target as HTMLElement).dataset.slideIndex);
+            if (!next.has(i)) {
+              if (next === prev) next = new Set(prev);
+              (next as Set<number>).add(i);
+            }
+          }
+          return next;
+        });
+      },
+      { root, rootMargin: '0px 0px -35% 0px', threshold: 0 },
+    );
+    slideRefs.current.forEach((el) => el && io.observe(el));
+    return () => io.disconnect();
+  }, [isVertical, slidesLen]);
+
+  useEffect(() => {
+    if (!isVertical) return;
+    const root = scrollerRef.current;
+    if (!root) return;
+    let raf = 0;
+    // 현재 위치(점 표시용) — 화면 위쪽 40% 지점을 지난 마지막 슬라이드.
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const line = root.scrollTop + root.clientHeight * 0.4;
+        let cur = 0;
+        slideRefs.current.forEach((el, i) => {
+          if (el && el.offsetTop <= line) cur = i;
+        });
+        setIndex(cur);
+      });
+    };
+    root.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      root.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, [isVertical, slidesLen]);
+
+  // 세로 모드의 점 클릭 — scrollIntoView 는 바깥 페이지(에디터)까지 스크롤할 수 있어
+  // 스크롤러 안에서만 이동시킨다.
+  const scrollToSlide = (i: number) => {
+    const root = scrollerRef.current;
+    const el = slideRefs.current[i];
+    if (root && el) root.scrollTo({ top: el.offsetTop, behavior: 'smooth' });
+  };
 
   const commitSwipe = (dx: number, dy: number) => {
     if (Math.abs(dy) > Math.abs(dx) * VERTICAL_BIAS) return;
@@ -175,6 +247,88 @@ export function SlideContainer({
         <BgmPlayer url={bgmUrl} autoStart={!isPreview || forceBgm} />
       )}
 
+      {isVertical ? (
+        <>
+      {/* ── 세로 모드: 위아래로 이어지는 스크롤 ─────────────────── */}
+      {/* containerType size — 슬라이드 안의 cqh 단위가 한 화면 높이를 기준으로 잡히도록. */}
+      <div
+        ref={scrollerRef}
+        className="wd-hide-scroll absolute inset-0 snap-y snap-proximity overflow-y-auto overflow-x-hidden overscroll-y-contain"
+        style={{ containerType: 'size' }}
+      >
+        {slides.map((slide, i) => {
+          const mode = slideReveal?.[i] ?? 'none';
+          const modeClass =
+            mode === 'together' ? ' wd-together' : mode === 'account' ? ' wd-account' : '';
+          const revealClass =
+            mode === 'none'
+              ? ''
+              : `wd-anim${modeClass}${revealed.has(i) ? ' wd-reveal' : ''}`;
+          // 첫 슬라이드(표지)는 레이아웃이 화면 높이를 기준으로 짜여 있어 한 화면으로 고정.
+          // 나머지는 최소 한 화면 + 내용만큼 늘어난다(.wd-vslide — 내부 스크롤 없음).
+          const isCover = i === 0;
+          return (
+            <div
+              key={i}
+              ref={(el) => {
+                slideRefs.current[i] = el;
+              }}
+              data-slide-index={i}
+              className={`relative w-full snap-start ${
+                isCover ? 'h-full overflow-hidden' : 'wd-vslide flex min-h-full flex-col'
+              }${revealClass ? ` ${revealClass}` : ''}`}
+              style={{ containerType: isCover ? 'size' : 'inline-size' }}
+            >
+              {slide}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 꽃잎 등 배경 효과 — 세로 모드에선 화면 위에 한 겹으로 고정(슬라이드 길이와 무관). */}
+      <div
+        className="pointer-events-none absolute inset-0 z-10"
+        style={{ containerType: 'size' }}
+      >
+        <FallingPetals type={petalType} colors={palette.petals} />
+      </div>
+
+      {/* 오른쪽 세로 점 표시 */}
+      {slidesLen > 1 && (
+        <div className="pointer-events-none absolute right-2 top-1/2 z-20 flex -translate-y-1/2 flex-col gap-1.5">
+          {slides.map((_, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => scrollToSlide(i)}
+              aria-label={`${i + 1}번 슬라이드로 이동`}
+              className="pointer-events-auto w-1.5 rounded-full transition-all"
+              style={{
+                height: i === index ? 20 : 6,
+                backgroundColor: i === index ? palette.accent : palette.dot,
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* 첫 화면 하단 "아래로" 안내 — 내려가기 시작하면 사라진다. */}
+      {slidesLen > 1 && (
+        <button
+          type="button"
+          onClick={() => scrollToSlide(1)}
+          aria-label="다음 슬라이드로 내려가기"
+          className={`absolute bottom-1 left-1/2 z-20 grid h-6 w-8 -translate-x-1/2 place-items-center text-base leading-none transition-opacity duration-300 ${
+            index === 0 ? 'wd-bounce-y opacity-100' : 'pointer-events-none opacity-0'
+          }`}
+          style={{ color: palette.accent }}
+        >
+          ⌄
+        </button>
+      )}
+        </>
+      ) : (
+        <>
       <motion.div
         className="flex h-full"
         animate={{ x: scoped ? `-${index * 100}%` : `-${index * 100}vw` }}
@@ -204,7 +358,7 @@ export function SlideContainer({
           return (
             <div
               key={i}
-              className={`mw-thin-scroll relative h-full flex-shrink-0 touch-pan-y overflow-y-auto ${
+              className={`wd-hide-scroll relative h-full flex-shrink-0 touch-pan-y overflow-y-auto ${
                 scoped ? 'w-full' : 'w-screen'
               }${revealClass ? ` ${revealClass}` : ''}`}
               // 모든 cqw/cqh 단위가 슬라이드 박스 자체를 기준으로 잡히도록
@@ -268,6 +422,8 @@ export function SlideContainer({
           ›
         </button>
       </div>
+      )}
+        </>
       )}
     </div>
   );

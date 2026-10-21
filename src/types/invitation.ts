@@ -10,6 +10,9 @@ import {
 
 // ── theme (global look & feel + page ordering) ────────────
 
+export const SLIDE_DIRECTIONS = ['horizontal', 'vertical'] as const;
+export type SlideDirection = (typeof SLIDE_DIRECTIONS)[number];
+
 export const BgmSchema = z
   .object({
     enabled: z.boolean().default(false),
@@ -37,6 +40,9 @@ export const ThemeSchema = z
     // 슬라이드 전환 효과 — 메인(표지)을 제외한 슬라이드로 넘어갈 때 콘텐츠가
     // 페이드인 + 천천히 떠오르는 효과로 등장. 기본 off.
     slideAnimation: z.boolean().default(false),
+    // 슬라이드 넘기기 방식 — 'horizontal'(기본, 좌우 스와이프) / 'vertical'(위아래로
+    // 이어지는 스크롤). 기존 알림장은 필드가 없어 horizontal 로 파싱되어 영향 없음.
+    slideDirection: z.enum(SLIDE_DIRECTIONS).default('horizontal'),
     // Stored as plain strings so adding new section keys later doesn't break
     // existing data; reconcilePageOrder() in lib/theme.ts normalizes at render time.
     pageOrder: z.array(z.string()).default([...SECTION_KEYS]),
@@ -48,6 +54,7 @@ export const ThemeSchema = z
     font: 'serif',
     hostMode: false,
     slideAnimation: false,
+    slideDirection: 'horizontal',
     pageOrder: [...SECTION_KEYS],
     bgm: { enabled: false, url: null },
   });

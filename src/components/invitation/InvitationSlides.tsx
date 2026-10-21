@@ -234,6 +234,7 @@ export function InvitationSlides({
         manualBgm={manualBgm}
         hostMode={content.theme.hostMode}
         slideReveal={slideReveal}
+        direction={content.theme.slideDirection ?? 'horizontal'}
       >
         {slides}
       </SlideContainer>
