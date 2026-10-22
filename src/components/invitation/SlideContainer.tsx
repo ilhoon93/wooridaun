@@ -58,8 +58,8 @@ interface Props {
   slideReveal?: Array<'none' | 'stagger' | 'together' | 'account'>;
   /**
    * 넘기기 방식. 'horizontal'(기본) = 좌우 스와이프 트랙.
-   * 'vertical' = 위아래로 이어지는 스크롤(스크롤 스냅). 첫 슬라이드(표지)는 한 화면
-   * 높이로 고정하고, 나머지는 최소 한 화면 + 내용만큼 늘어나 슬라이드 내부 스크롤이 없다.
+   * 'vertical' = 위아래로 이어지는 자연 스크롤. 첫 슬라이드(표지)는 한 화면
+   * 높이로 고정하고, 마지막(엔딩)은 최소 한 화면, 그 사이 슬라이드는 내용 높이에 맞춘다(스냅 없음).
    */
   direction?: 'horizontal' | 'vertical';
 }
@@ -253,7 +253,7 @@ export function SlideContainer({
       {/* containerType size — 슬라이드 안의 cqh 단위가 한 화면 높이를 기준으로 잡히도록. */}
       <div
         ref={scrollerRef}
-        className="wd-hide-scroll absolute inset-0 snap-y snap-proximity overflow-y-auto overflow-x-hidden overscroll-y-contain"
+        className="wd-hide-scroll absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-y-contain"
         style={{ containerType: 'size' }}
       >
         {slides.map((slide, i) => {
@@ -265,8 +265,12 @@ export function SlideContainer({
               ? ''
               : `wd-anim${modeClass}${revealed.has(i) ? ' wd-reveal' : ''}`;
           // 첫 슬라이드(표지)는 레이아웃이 화면 높이를 기준으로 짜여 있어 한 화면으로 고정.
-          // 나머지는 최소 한 화면 + 내용만큼 늘어난다(.wd-vslide — 내부 스크롤 없음).
+          // 마지막 슬라이드(엔딩)는 공유 버튼이 하단에 붙는 구조라 최소 한 화면을 유지하고,
+          // 그 사이 슬라이드는 내용 높이에 맞춰(.wd-vslide-fit) 빈 여백으로 스크롤이 길어지지
+          // 않게 한다. 스크롤 스냅은 쓰지 않는다(조금 움직였을 때 미끄러지며 되돌아가거나
+          // 다음 슬라이드로 끌려가는 느낌 제거 — 손가락을 따라 자연스럽게 스크롤).
           const isCover = i === 0;
+          const isLast = i === slidesLen - 1;
           return (
             <div
               key={i}
@@ -274,8 +278,12 @@ export function SlideContainer({
                 slideRefs.current[i] = el;
               }}
               data-slide-index={i}
-              className={`relative w-full snap-start ${
-                isCover ? 'h-full overflow-hidden' : 'wd-vslide flex min-h-full flex-col'
+              className={`relative w-full ${
+                isCover
+                  ? 'h-full overflow-hidden'
+                  : isLast
+                    ? 'wd-vslide flex min-h-full flex-col'
+                    : 'wd-vslide wd-vslide-fit flex flex-col'
               }${revealClass ? ` ${revealClass}` : ''}`}
               style={{ containerType: isCover ? 'size' : 'inline-size' }}
             >
