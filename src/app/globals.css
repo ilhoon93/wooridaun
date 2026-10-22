@@ -321,6 +321,13 @@
 .wd-vslide > :first-child {
   flex: 1 0 auto;
 }
+/* 세로 모드 중간 슬라이드 — 화면 높이 대신 내용 높이에 맞춘다. 슬라이드마다 위아래
+ * 여백(py-16 = 64px)이 겹쳐 간격이 과하게 벌어지지 않도록 세로 여백만 줄인다. */
+.wd-vslide-fit > :first-child {
+  min-height: 0;
+  padding-top: 3rem;
+  padding-bottom: 3rem;
+}
 
 /* 세로 모드 첫 화면 "아래로" 안내 화살표 */
 @keyframes wd-bounce-y {
