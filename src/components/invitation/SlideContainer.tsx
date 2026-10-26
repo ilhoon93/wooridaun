@@ -96,56 +96,54 @@ export function SlideContainer({
   // ── 세로 모드 전용 ────────────────────────────────────────
   const scrollerRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<Array<HTMLDivElement | null>>([]);
-  // 한 번 화면에 들어온 슬라이드 — 세로 모드에선 위로 되돌아가도 다시 숨기지 않는다.
-  const [revealed, setRevealed] = useState<ReadonlySet<number>>(() => new Set([0]));
-
-  useEffect(() => {
-    if (!isVertical) return;
-    const root = scrollerRef.current;
-    if (!root || typeof IntersectionObserver === 'undefined') return;
-    // 슬라이드 윗부분이 화면 아래쪽 35% 선을 넘어 들어오면 등장 효과 시작.
-    const io = new IntersectionObserver(
-      (entries) => {
-        setRevealed((prev) => {
-          let next = prev;
-          for (const e of entries) {
-            if (!e.isIntersecting) continue;
-            const i = Number((e.target as HTMLElement).dataset.slideIndex);
-            if (!next.has(i)) {
-              if (next === prev) next = new Set(prev);
-              (next as Set<number>).add(i);
-            }
-          }
-          return next;
-        });
-      },
-      { root, rootMargin: '0px 0px -35% 0px', threshold: 0 },
-    );
-    slideRefs.current.forEach((el) => el && io.observe(el));
-    return () => io.disconnect();
-  }, [isVertical, slidesLen]);
+  // 지금까지 "열린" 마지막 슬라이드 인덱스. 세로 모드는 처음 내려갈 때 한 번에 끝까지
+  // 미끄러지지 않도록, 열린 슬라이드 + 바로 다음 1장까지만 렌더해 스크롤이 거기서
+  // 멈추게 한다. 스크롤이 멈추면 그 다음 장이 페이드인으로 열리고, 그 뒤 1장이 이어
+  // 붙는다. 한 번 열린 구간은 다시 올렸다 내려도 막힘 없이 자연스럽게 스크롤된다.
+  const [opened, setOpened] = useState(0);
+  const openedRef = useRef(opened);
+  openedRef.current = opened;
 
   useEffect(() => {
     if (!isVertical) return;
     const root = scrollerRef.current;
     if (!root) return;
     let raf = 0;
-    // 현재 위치(첫 화면 '아래로' 안내 표시 여부용) — 화면 위쪽 40% 지점을 지난 마지막 슬라이드.
+    let idle: ReturnType<typeof setTimeout> | undefined;
+
+    // 스크롤이 멈췄을 때 — 다음 미개봉 슬라이드가 화면에 들어와 있으면 연다.
+    const tryOpenNext = () => {
+      const next = openedRef.current + 1;
+      if (next >= slidesLen) return;
+      const el = slideRefs.current[next];
+      if (!el) return;
+      const view = root.scrollTop + root.clientHeight;
+      const atBottom = view >= root.scrollHeight - 4;
+      if (atBottom || el.offsetTop < root.scrollTop + root.clientHeight * 0.8) {
+        setOpened(next);
+      }
+    };
+
     const onScroll = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
+        // 현재 위치(첫 화면 '아래로' 안내 표시 여부용) — 화면 위쪽 40% 지점을 지난 마지막
+        // 슬라이드. 아직 렌더 안 된(display:none) 슬라이드는 offsetParent 가 없어 제외.
         const line = root.scrollTop + root.clientHeight * 0.4;
         let cur = 0;
         slideRefs.current.forEach((el, i) => {
-          if (el && el.offsetTop <= line) cur = i;
+          if (el && el.offsetParent && el.offsetTop <= line) cur = i;
         });
         setIndex(cur);
       });
+      if (idle) clearTimeout(idle);
+      idle = setTimeout(tryOpenNext, 160);
     };
     root.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       root.removeEventListener('scroll', onScroll);
       cancelAnimationFrame(raf);
+      if (idle) clearTimeout(idle);
     };
   }, [isVertical, slidesLen]);
 
@@ -260,15 +258,18 @@ export function SlideContainer({
           const mode = slideReveal?.[i] ?? 'none';
           const modeClass =
             mode === 'together' ? ' wd-together' : mode === 'account' ? ' wd-account' : '';
+          const isOpen = i <= opened;
+          // 처음 열릴 때 한 번만 은은하게 떠오른다(클래스가 유지되므로 다시 스크롤해도
+          // 애니메이션이 반복되지 않음). 슬라이드 전환 효과(순차 등장)가 켜진 슬라이드는
+          // 그 효과가 대신 담당한다. 표지는 효과 없음.
           const revealClass =
-            mode === 'none'
+            i === 0
               ? ''
-              : `wd-anim${modeClass}${revealed.has(i) ? ' wd-reveal' : ''}`;
-          // 첫 슬라이드(표지)는 레이아웃이 화면 높이를 기준으로 짜여 있어 한 화면으로 고정.
-          // 마지막 슬라이드(엔딩)는 공유 버튼이 하단에 붙는 구조라 최소 한 화면을 유지하고,
-          // 그 사이 슬라이드는 내용 높이에 맞춰(.wd-vslide-fit) 빈 여백으로 스크롤이 길어지지
-          // 않게 한다. 스크롤 스냅은 쓰지 않는다(조금 움직였을 때 미끄러지며 되돌아가거나
-          // 다음 슬라이드로 끌려가는 느낌 제거 — 손가락을 따라 자연스럽게 스크롤).
+              : mode === 'none'
+                ? `wd-vfade${isOpen ? ' wd-vfade-in' : ''}`
+                : `wd-anim${modeClass}${isOpen ? ' wd-reveal' : ''}`;
+          // 열린 슬라이드 + 바로 다음 1장까지만 렌더 → 스크롤이 그 장에서 멈춘다.
+          const isRendered = i <= opened + 1;
           const isCover = i === 0;
           const isLast = i === slidesLen - 1;
           return (
@@ -285,7 +286,11 @@ export function SlideContainer({
                     ? 'wd-vslide flex min-h-full flex-col'
                     : 'wd-vslide wd-vslide-fit flex flex-col'
               }${revealClass ? ` ${revealClass}` : ''}`}
-              style={{ containerType: isCover ? 'size' : 'inline-size' }}
+              style={{
+                containerType: isCover ? 'size' : 'inline-size',
+                // 아직 차례가 안 된 슬라이드는 숨겨 스크롤 범위에서 뺀다.
+                ...(isRendered ? {} : { display: 'none' }),
+              }}
             >
               {slide}
             </div>

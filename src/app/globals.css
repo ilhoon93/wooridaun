@@ -329,6 +329,22 @@
   padding-bottom: 3rem;
 }
 
+/* 세로 모드 — 슬라이드가 처음 열릴 때 한 번 은은하게 떠오르는 페이드인. */
+.wd-vfade {
+  opacity: 0;
+  transform: translateY(24px);
+}
+.wd-vfade.wd-vfade-in {
+  animation: wd-vfade-in 1.2s cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+}
+@keyframes wd-vfade-in {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wd-vfade, .wd-vfade.wd-vfade-in { opacity: 1; transform: none; animation: none; }
+}
+
 /* 세로 모드 첫 화면 "아래로" 안내 화살표 */
 @keyframes wd-bounce-y {
   0%, 100% { transform: translate(-50%, 0); }
