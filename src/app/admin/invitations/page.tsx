@@ -106,10 +106,24 @@ export default async function AdminInvitationsPage({ searchParams }: PageProps) 
         for (const r of results) counts.set(r.id, { guest: r.guest, owner: r.owner });
       }
 
+      // 방명록 메시지 수 — 페이지당 최대 30건이라 알림장별 exact head count 를 병렬로.
+      // (invitation_id 인덱스 사용, 행 전송 없음. 실패한 건은 null → '-' 표시.)
+      const guestbookCounts = new Map<string, number | null>();
+      await Promise.all(
+        ids.map(async (id) => {
+          const { count, error: gbErr } = await sb
+            .from('guestbook_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('invitation_id', id);
+          guestbookCounts.set(id, gbErr ? null : (count ?? 0));
+        }),
+      );
+
       rows = rows.map((r) => ({
         ...r,
         guestVisits: counts.get(r.id)?.guest ?? 0,
         ownerVisits: counts.get(r.id)?.owner ?? 0,
+        guestbookCount: guestbookCounts.get(r.id) ?? null,
       }));
     }
   } catch (e) {

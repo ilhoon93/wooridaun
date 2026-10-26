@@ -37,6 +37,8 @@ export interface InvitationRow {
   guestVisits?: number;
   /** 소장용 방문 세션 수(집계). */
   ownerVisits?: number;
+  /** 방명록 메시지 수(집계). 조회 실패 시 null. */
+  guestbookCount?: number | null;
 }
 
 function statusOf(r: InvitationRow): {
@@ -128,114 +130,100 @@ export function InvitationsTable({
       </form>
 
       <div className="overflow-x-auto rounded-md border border-[#E8DCC9]">
-        <table className="w-full min-w-[820px] border-collapse text-sm">
+        <table className="w-full min-w-[720px] border-collapse text-[12px]">
           <thead>
             <tr className="bg-[#FAF7F2] text-[11px] text-[#8B7355]">
-              <th className="px-3 py-2 text-left font-medium">최종 수정 / 생성일시</th>
-              <th className="px-3 py-2 text-left font-medium">이메일</th>
-              <th className="px-3 py-2 text-left font-medium">신랑 · 신부</th>
-              <th className="px-3 py-2 text-left font-medium">예식일</th>
-              <th className="px-2 py-2 text-center font-medium">수정 여부</th>
-              <th className="px-2 py-2 text-center font-medium">상태</th>
-              <th className="px-3 py-2 text-left font-medium">보기</th>
+              <th className="px-2 py-1.5 text-left font-medium">최종 수정 / 생성</th>
+              <th className="px-2 py-1.5 text-left font-medium">이메일</th>
+              <th className="px-2 py-1.5 text-left font-medium">신랑 · 신부 / 예식일</th>
+              <th className="px-2 py-1.5 text-center font-medium">상태</th>
+              <th className="px-2 py-1.5 text-center font-medium" title="방명록 메시지 수">
+                방명록
+              </th>
+              <th className="px-2 py-1.5 text-left font-medium">보기 (방문수)</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((r) => {
               const st = statusOf(r);
+              const live = r.is_published && !!r.pub_slug;
               return (
-                <tr key={r.id} className="border-t border-[#E8DCC9]">
-                  {/* 최종 수정(위, 강조) / 생성일시(아래, 옅게) 한 열에 위아래로. */}
-                  <td className="whitespace-nowrap px-3 py-2 text-[11px] text-[#5C4633]">
-                    <div className="flex flex-col leading-tight">
-                      <span className="font-medium text-[#3D2E1F]">
-                        {formatKstDateTime(r.updated_at)}
-                      </span>
-                      <span className="mt-0.5 text-[10px] text-[#B0A088]">
-                        생성 {formatKstDateTime(r.created_at)}
-                      </span>
+                <tr key={r.id} className="border-t border-[#E8DCC9] align-middle">
+                  {/* 최종 수정(위, 강조) / 생성일시(아래, 옅게). */}
+                  <td className="whitespace-nowrap px-2 py-1.5 text-[11px] leading-tight">
+                    <div className="font-medium text-[#3D2E1F]">{formatKstDateTime(r.updated_at)}</div>
+                    <div className="text-[10px] text-[#B0A088]">생성 {formatKstDateTime(r.created_at)}</div>
+                  </td>
+                  <td className="max-w-[200px] truncate px-2 py-1.5 text-[#3D2E1F]" title={r.email ?? r.user_id}>
+                    {r.email ?? <span className="text-[#B0A088]">{r.user_id.slice(0, 8)}…</span>}
+                  </td>
+                  {/* 이름(위) / 예식일(아래) — 한 열로 합쳐 행 폭을 줄인다. */}
+                  <td className="whitespace-nowrap px-2 py-1.5 leading-tight text-[#5C4633]">
+                    <div>
+                      {r.groom_name || '-'} · {r.bride_name || '-'}
                     </div>
+                    <div className="text-[10px] text-[#B0A088]">{r.wedding_date ?? '예식일 미정'}</div>
                   </td>
-                  <td className="px-3 py-2 text-[12px] text-[#3D2E1F]">
-                    {r.email ?? (
-                      <span className="text-[#B0A088]">{r.user_id.slice(0, 8)}…</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-[12px] text-[#5C4633]">
-                    {r.groom_name || '-'} · {r.bride_name || '-'}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-2 text-[12px] text-[#5C4633]">
-                    {r.wedding_date ?? '-'}
-                  </td>
-                  {/* 수정 여부 — 수정됨/미수정 배지 + 그 아래 미리보기(새 탭) 링크. */}
-                  <td className="px-2 py-2 text-center">
-                    <div className="flex flex-col items-center gap-1">
-                      {r.was_made == null ? (
-                        <span className="text-[10px] text-[#B0A088]">-</span>
-                      ) : r.was_made ? (
-                        <span className="inline-block rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700 ring-1 ring-sky-200">
-                          수정됨
-                        </span>
-                      ) : (
-                        <span className="inline-block rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-500 ring-1 ring-stone-200">
-                          미수정
+                  {/* 발행 상태 + 수정 여부 배지를 한 줄에. */}
+                  <td className="whitespace-nowrap px-2 py-1.5 text-center">
+                    <div className="inline-flex items-center gap-1">
+                      <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ring-1 ${st.cls}`}>
+                        {st.label}
+                      </span>
+                      {r.was_made != null && (
+                        <span
+                          className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ring-1 ${
+                            r.was_made
+                              ? 'bg-sky-50 text-sky-700 ring-sky-200'
+                              : 'bg-stone-100 text-stone-500 ring-stone-200'
+                          }`}
+                        >
+                          {r.was_made ? '수정됨' : '미수정'}
                         </span>
                       )}
+                    </div>
+                  </td>
+                  <td className="whitespace-nowrap px-2 py-1.5 text-center tabular-nums">
+                    {r.guestbookCount == null ? (
+                      <span className="text-[#B0A088]">-</span>
+                    ) : r.guestbookCount > 0 ? (
+                      <span className="font-medium text-[#3D2E1F]">{r.guestbookCount.toLocaleString()}</span>
+                    ) : (
+                      <span className="text-[#B0A088]">0</span>
+                    )}
+                  </td>
+                  {/* 운영자 미리보기 · 하객용(방문수) · 소장용(방문수) 을 한 줄에. */}
+                  <td className="whitespace-nowrap px-2 py-1.5 text-[11px]">
+                    <div className="flex items-center gap-2.5">
                       <a
                         href={`/admin/invitations/${r.id}/preview`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[10.5px] text-[#8B7355] underline hover:text-[#5C4633]"
+                        className="text-[#8B7355] underline hover:text-[#5C4633]"
                       >
-                        미리보기 ↗
+                        미리보기
                       </a>
-                    </div>
-                  </td>
-                  <td className="px-2 py-2 text-center">
-                    <span
-                      className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ring-1 ${st.cls}`}
-                    >
-                      {st.label}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-[12px]">
-                    <div className="flex flex-col gap-0.5">
-                      {/* 운영자 미리보기 링크는 '수정 여부' 열로 이동. 여기선 하객/소장용만. */}
-                      {r.is_published && r.pub_slug && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <a
-                            href={`/${r.pub_slug}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[11px] text-[#8B7355] hover:text-[#5C4633]"
-                          >
-                            하객용 ↗
-                          </a>
-                          <span
-                            title="하객용 방문 세션 수"
-                            className="rounded-full bg-[#F1E9DC] px-1.5 py-0.5 text-[10px] font-medium text-[#8B7355]"
-                          >
-                            {(r.guestVisits ?? 0).toLocaleString()}
-                          </span>
-                        </span>
+                      {live && (
+                        <a
+                          href={`/${r.pub_slug}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="하객용 열기 · 방문 세션 수"
+                          className="text-[#8B7355] hover:text-[#5C4633]"
+                        >
+                          하객용 <span className="tabular-nums text-[#3D2E1F]">{(r.guestVisits ?? 0).toLocaleString()}</span>
+                        </a>
                       )}
-                      {r.is_published && r.pub_slug && r.owner_token && (
-                        <span className="inline-flex items-center gap-1.5">
-                          <a
-                            href={`/${r.pub_slug}/o/${r.owner_token}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[11px] text-[#8B7355] hover:text-[#5C4633]"
-                          >
-                            소장용 ↗
-                          </a>
-                          <span
-                            title="소장용 방문 세션 수"
-                            className="rounded-full bg-[#F1E9DC] px-1.5 py-0.5 text-[10px] font-medium text-[#8B7355]"
-                          >
-                            {(r.ownerVisits ?? 0).toLocaleString()}
-                          </span>
-                        </span>
+                      {live && r.owner_token && (
+                        <a
+                          href={`/${r.pub_slug}/o/${r.owner_token}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="소장용 열기 · 방문 세션 수"
+                          className="text-[#8B7355] hover:text-[#5C4633]"
+                        >
+                          소장용 <span className="tabular-nums text-[#3D2E1F]">{(r.ownerVisits ?? 0).toLocaleString()}</span>
+                        </a>
                       )}
                     </div>
                   </td>
@@ -244,7 +232,7 @@ export function InvitationsTable({
             })}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-10 text-center text-xs text-[#8B7355]">
+                <td colSpan={6} className="px-3 py-10 text-center text-xs text-[#8B7355]">
                   알림장이 없습니다.
                 </td>
               </tr>
