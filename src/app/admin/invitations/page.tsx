@@ -106,10 +106,45 @@ export default async function AdminInvitationsPage({ searchParams }: PageProps) 
         for (const r of results) counts.set(r.id, { guest: r.guest, owner: r.owner });
       }
 
+      // 방명록 메시지 수 — 페이지당 최대 30건이라 알림장별 exact head count 를 병렬로.
+      // (invitation_id 인덱스 사용, 행 전송 없음. 실패한 건은 null → '-' 표시.)
+      const guestbookCounts = new Map<string, number | null>();
+      await Promise.all(
+        ids.map(async (id) => {
+          const { count, error: gbErr } = await sb
+            .from('guestbook_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('invitation_id', id);
+          guestbookCounts.set(id, gbErr ? null : (count ?? 0));
+        }),
+      );
+
+      // 넘기기 방식(가로/세로) + 슬라이드 전환 효과 — 편집본 content 의 theme 값만 JSON 경로로
+      // 가져온다(content 전체 전송 없음). 필드가 없는 기존 알림장은 기본값(가로·효과 off).
+      const themeById = new Map<string, { dir: string | null; anim: string | null }>();
+      const { data: themeRows } = await sb
+        .from('invitations')
+        .select('id, dir:content->theme->>slideDirection, anim:content->theme->>slideAnimation')
+        .in('id', ids);
+      for (const t of (themeRows ?? []) as unknown as {
+        id: string;
+        dir: string | null;
+        anim: string | null;
+      }[]) {
+        themeById.set(t.id, { dir: t.dir, anim: t.anim });
+      }
+
       rows = rows.map((r) => ({
         ...r,
         guestVisits: counts.get(r.id)?.guest ?? 0,
         ownerVisits: counts.get(r.id)?.owner ?? 0,
+        guestbookCount: guestbookCounts.get(r.id) ?? null,
+        slideDirection: themeById.has(r.id)
+          ? themeById.get(r.id)?.dir === 'vertical'
+            ? 'vertical'
+            : 'horizontal'
+          : null,
+        slideAnimation: themeById.has(r.id) ? themeById.get(r.id)?.anim === 'true' : null,
       }));
     }
   } catch (e) {

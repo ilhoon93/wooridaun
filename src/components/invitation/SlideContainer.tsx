@@ -60,6 +60,7 @@ interface Props {
    * 넘기기 방식. 'horizontal'(기본) = 좌우 스와이프 트랙.
    * 'vertical' = 위아래로 이어지는 자연 스크롤. 첫 슬라이드(표지)는 한 화면
    * 높이로 고정하고, 마지막(엔딩)은 최소 한 화면, 그 사이 슬라이드는 내용 높이에 맞춘다(스냅 없음).
+   * 슬라이드 전환 효과가 켜져 있으면 처음 내려갈 때 구간마다 멈추고 등장 효과를 보여준다.
    */
   direction?: 'horizontal' | 'vertical';
 }
@@ -96,44 +97,86 @@ export function SlideContainer({
   // ── 세로 모드 전용 ────────────────────────────────────────
   const scrollerRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<Array<HTMLDivElement | null>>([]);
-  // 한 번 화면에 들어온 슬라이드 — 세로 모드에선 위로 되돌아가도 다시 숨기지 않는다.
-  const [revealed, setRevealed] = useState<ReadonlySet<number>>(() => new Set([0]));
-
-  useEffect(() => {
-    if (!isVertical) return;
-    const root = scrollerRef.current;
-    if (!root || typeof IntersectionObserver === 'undefined') return;
-    // 슬라이드 윗부분이 화면 아래쪽 35% 선을 넘어 들어오면 등장 효과 시작.
-    const io = new IntersectionObserver(
-      (entries) => {
-        setRevealed((prev) => {
-          let next = prev;
-          for (const e of entries) {
-            if (!e.isIntersecting) continue;
-            const i = Number((e.target as HTMLElement).dataset.slideIndex);
-            if (!next.has(i)) {
-              if (next === prev) next = new Set(prev);
-              (next as Set<number>).add(i);
-            }
-          }
-          return next;
-        });
-      },
-      { root, rootMargin: '0px 0px -35% 0px', threshold: 0 },
-    );
-    slideRefs.current.forEach((el) => el && io.observe(el));
-    return () => io.disconnect();
-  }, [isVertical, slidesLen]);
+  // 세로 + 슬라이드 전환 효과(slideReveal 중 하나라도 'none' 이 아님)일 때만 "구간 멈춤
+  // + 등장 효과" 를 쓴다. 효과를 끈 세로 모드는 모든 내용이 보이는 자연 스크롤 그대로.
+  const gateOn = isVertical && !!slideReveal?.some((m) => m !== 'none');
+  // 열린(등장 효과가 실행된) 슬라이드. 한 번 열리면 계속 열린 상태 → 다시 올렸다 내려도
+  // 효과가 반복되지 않고 막힘 없이 스크롤된다.
+  const [openSet, setOpenSet] = useState<ReadonlySet<number>>(() => new Set([0]));
+  // 스크롤 가능한 높이 한도(px). 트랙 높이를 이 값으로 잘라 그 아래로는 내려갈 수 없게
+  // 해서, 한 번에 크게 쓸어내려도 다음 구간에서 멈춘다. 스크롤이 멈추면 다음 구간까지
+  // 한도를 늘린다. null = 아직 측정 전 / 끝까지 열림(제한 없음).
+  const [limit, setLimit] = useState<number | null>(null);
+  const limitRef = useRef(limit);
+  limitRef.current = limit;
 
   useEffect(() => {
     if (!isVertical) return;
     const root = scrollerRef.current;
     if (!root) return;
     let raf = 0;
-    // 현재 위치(첫 화면 '아래로' 안내 표시 여부용) — 화면 위쪽 40% 지점을 지난 마지막 슬라이드.
+    let idle: ReturnType<typeof setTimeout> | undefined;
+
+    // 다음 멈춤 위치(scrollTop) 계산. 한 번에 최소 반 화면 ~ 최대 한 화면만큼 내려가도록
+    // 하고, 그 범위 안에 "섹션 시작(윗변이 화면 맨 위)" 또는 "긴 섹션의 끝(아랫변이 화면
+    // 맨 아래)" 이 있으면 그 위치에 맞춰 멈춘다(가장 가까운 것). 범위 안에 기준점이 없으면
+    // 화면 85% 만큼 내려간다. 끝까지 반 화면도 안 남으면 끝으로 바로 간다.
+    const nextStop = (cur: number) => {
+      const vh = root.clientHeight;
+      const marks: number[] = [];
+      let total = 0;
+      slideRefs.current.forEach((el, i) => {
+        if (!el) return;
+        const top = el.offsetTop;
+        const h = el.offsetHeight;
+        total = Math.max(total, top + h);
+        if (i === 0) return;
+        marks.push(top);
+        if (h > vh) marks.push(top + h - vh);
+      });
+      const max = Math.max(0, total - vh);
+      const lo = cur + vh * 0.5;
+      const hi = cur + vh;
+      const inRange = marks.filter((m) => m >= lo && m <= hi).sort((x, y) => x - y);
+      let next = inRange.length > 0 ? inRange[0] : cur + Math.round(vh * 0.85);
+      if (max - next < vh * 0.5) next = max;
+      return { next: Math.min(next, max), max, vh };
+    };
+
+    // 다음 멈춤 위치까지 한도를 늘린다. 끝에 닿으면 제한 해제(null).
+    const extendLimit = () => {
+      const vh = root.clientHeight;
+      const cur = (limitRef.current ?? vh) - vh;
+      const { next, max } = nextStop(cur);
+      if (next >= max - 2) setLimit(null);
+      else setLimit(next + vh);
+    };
+
+    // 스크롤이 멈췄을 때 — 화면 위쪽 75% 안으로 들어온 슬라이드를 연다(등장 효과).
+    // 한도 끝에 닿아 멈췄다면 다음 구간까지 한도를 늘린다.
+    const onIdle = () => {
+      const line = root.scrollTop + root.clientHeight * 0.75;
+      setOpenSet((prev) => {
+        let next = prev;
+        slideRefs.current.forEach((el, i) => {
+          if (el && el.offsetTop < line && !next.has(i)) {
+            if (next === prev) next = new Set(prev);
+            (next as Set<number>).add(i);
+          }
+        });
+        return next;
+      });
+      const lim = limitRef.current;
+      if (lim != null && root.scrollTop + root.clientHeight >= lim - 4) extendLimit();
+    };
+
+    // 첫 한도 — 표지 다음 섹션의 시작 위치까지만.
+    if (gateOn && limitRef.current == null) extendLimit();
+
     const onScroll = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
+        // 현재 위치(첫 화면 '아래로' 안내 표시 여부용) — 화면 위쪽 40% 지점을 지난 마지막 슬라이드.
         const line = root.scrollTop + root.clientHeight * 0.4;
         let cur = 0;
         slideRefs.current.forEach((el, i) => {
@@ -141,13 +184,17 @@ export function SlideContainer({
         });
         setIndex(cur);
       });
+      if (!gateOn) return;
+      if (idle) clearTimeout(idle);
+      idle = setTimeout(onIdle, 160);
     };
     root.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       root.removeEventListener('scroll', onScroll);
       cancelAnimationFrame(raf);
+      if (idle) clearTimeout(idle);
     };
-  }, [isVertical, slidesLen]);
+  }, [isVertical, gateOn, slidesLen]);
 
   // 세로 모드의 '아래로' 안내 클릭 — scrollIntoView 는 바깥 페이지(에디터)까지 스크롤할 수 있어
   // 스크롤러 안에서만 이동시킨다.
@@ -253,22 +300,29 @@ export function SlideContainer({
       {/* containerType size — 슬라이드 안의 cqh 단위가 한 화면 높이를 기준으로 잡히도록. */}
       <div
         ref={scrollerRef}
-        className="wd-hide-scroll absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-y-contain"
+        // overscroll-y-none — 한도/끝에 닿았을 때 튕겼다 되돌아오는(바운스) 움찔거림 제거.
+        className="wd-hide-scroll absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-y-none"
         style={{ containerType: 'size' }}
       >
+        {/* 트랙 — 구간 멈춤이 켜지면 높이를 한도(limit)로 잘라 그 아래로 스크롤되지 않게 한다. */}
+        <div
+          className="relative"
+          style={gateOn && limit != null ? { height: limit, overflow: 'hidden' } : undefined}
+        >
         {slides.map((slide, i) => {
           const mode = slideReveal?.[i] ?? 'none';
           const modeClass =
             mode === 'together' ? ' wd-together' : mode === 'account' ? ' wd-account' : '';
+          const isOpen = openSet.has(i);
+          // 전환 효과가 켜진 슬라이드는 처음 열릴 때 한 번, 박스 전체 페이드인(.wd-vfade —
+          // 위치 이동 없이 투명도만) + 요소별 순차 떠오르기(.wd-anim) 를 함께 적용. 클래스가
+          // 유지되므로 다시 스크롤해도 반복되지 않는다. 효과 off / 표지는 그대로 노출.
           const revealClass =
-            mode === 'none'
+            !gateOn || mode === 'none'
               ? ''
-              : `wd-anim${modeClass}${revealed.has(i) ? ' wd-reveal' : ''}`;
-          // 첫 슬라이드(표지)는 레이아웃이 화면 높이를 기준으로 짜여 있어 한 화면으로 고정.
-          // 마지막 슬라이드(엔딩)는 공유 버튼이 하단에 붙는 구조라 최소 한 화면을 유지하고,
-          // 그 사이 슬라이드는 내용 높이에 맞춰(.wd-vslide-fit) 빈 여백으로 스크롤이 길어지지
-          // 않게 한다. 스크롤 스냅은 쓰지 않는다(조금 움직였을 때 미끄러지며 되돌아가거나
-          // 다음 슬라이드로 끌려가는 느낌 제거 — 손가락을 따라 자연스럽게 스크롤).
+              : `wd-vfade${isOpen ? ' wd-vfade-in' : ''} wd-anim${modeClass}${
+                  isOpen ? ' wd-reveal' : ''
+                }`;
           const isCover = i === 0;
           const isLast = i === slidesLen - 1;
           return (
@@ -285,12 +339,18 @@ export function SlideContainer({
                     ? 'wd-vslide flex min-h-full flex-col'
                     : 'wd-vslide wd-vslide-fit flex flex-col'
               }${revealClass ? ` ${revealClass}` : ''}`}
-              style={{ containerType: isCover ? 'size' : 'inline-size' }}
+              style={{
+                containerType: isCover ? 'size' : 'inline-size',
+                // 트랙 안에서 표지 h-full 이 스크롤러(한 화면) 높이를 따르도록.
+                ...(isCover ? { height: '100cqh' } : {}),
+                ...(isLast ? { minHeight: '100cqh' } : {}),
+              }}
             >
               {slide}
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* 꽃잎 등 배경 효과 — 세로 모드에선 화면 위에 한 겹으로 고정(슬라이드 길이와 무관). */}

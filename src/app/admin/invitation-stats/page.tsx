@@ -150,10 +150,16 @@ export default async function InvitationStatsAdminPage() {
   // 방문/방명록/서명은 head count 로 행 전송 없이 세고, 축하·좋아요는 합계라 값만 읽어 합산.
   // 홈페이지(랜딩) 방문은 site_visits(마이그 076) — 정확 count(누적) + 최근 7일.
   // (공개 사회적증거의 public_site_visit_count 는 10단위 내림이라, 운영자용은 정확 수치로.)
+  // 하객/소장용 구분(viewer_role) 기록 시작 시각 — 구분 기능이 배포된 PR #363 머지 시각
+  // (2026-09-11 14:18 KST). 그 이전 방문은 컬럼 추가 때 일괄 'guest' 로 채워져 하객/소장
+  // 구분이 불가하므로, 방문 시각 기준으로 따로 떼어 '구분 전 방문' 으로 표시한다.
+  const VIEWER_ROLE_SINCE = '2026-09-11T05:18:00Z';
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   let engagement: {
     guestVisits: number;
     ownerVisits: number;
+    /** 구분 기록 시작(VIEWER_ROLE_SINCE) 이전 방문 — 하객/소장 미구분. */
+    legacyVisits: number;
     guestbook: number;
     signatures: number;
     cheers: number;
@@ -168,6 +174,7 @@ export default async function InvitationStatsAdminPage() {
     const [
       totalVisitsRes,
       ownerVisitsRes,
+      legacyVisitsRes,
       gbRes,
       sigRes,
       cheersRes,
@@ -180,7 +187,12 @@ export default async function InvitationStatsAdminPage() {
       sb
         .from('guest_visits')
         .select('*', { count: 'exact', head: true })
-        .eq('viewer_role', 'owner'),
+        .eq('viewer_role', 'owner')
+        .gte('visited_at', VIEWER_ROLE_SINCE),
+      sb
+        .from('guest_visits')
+        .select('*', { count: 'exact', head: true })
+        .lt('visited_at', VIEWER_ROLE_SINCE),
       sb.from('guestbook_messages').select('*', { count: 'exact', head: true }),
       sb.from('signatures').select('*', { count: 'exact', head: true }),
       sb.from('invitation_cheers').select('cheers_count'),
@@ -200,6 +212,7 @@ export default async function InvitationStatsAdminPage() {
 
     const totalVisits = totalVisitsRes.count ?? 0;
     const ownerVisits = ownerVisitsRes.count ?? 0;
+    const legacyVisits = legacyVisitsRes.count ?? 0;
     const cheers = (
       (cheersRes.data ?? []) as { cheers_count: number | null }[]
     ).reduce((s, r) => s + (r.cheers_count ?? 0), 0);
@@ -208,8 +221,10 @@ export default async function InvitationStatsAdminPage() {
     ).reduce((s, r) => s + (r.like_count ?? 0), 0);
 
     engagement = {
-      guestVisits: Math.max(0, totalVisits - ownerVisits),
+      // 하객용 = 구분 시작 이후 방문 중 소장용이 아닌 것.
+      guestVisits: Math.max(0, totalVisits - legacyVisits - ownerVisits),
       ownerVisits,
+      legacyVisits,
       guestbook: gbRes.count ?? 0,
       signatures: sigRes.count ?? 0,
       cheers,
@@ -367,8 +382,8 @@ export default async function InvitationStatsAdminPage() {
           <span className="text-[11px] text-[#8B7355]">전체 알림장 누적</span>
         </div>
         <p className="mb-3 text-[10.5px] leading-relaxed text-[#B09B80]">
-          하객용/소장용 방문 분리 집계는 방문 구분 기능(viewer_role) 도입 이후부터
-          정확합니다. 그 이전에 쌓인 소장용 방문은 하객용으로 집계되어 있습니다.
+          하객용/소장용 방문은 구분 기록을 시작한 2026.09.11 14:18 이후 방문만 집계합니다.
+          그 이전 방문은 하객/소장 구분이 없어 &lsquo;구분 전 방문&rsquo;으로 따로 표시합니다.
           방문수에서 운영자(admin) 본인의 조회는 제외됩니다(제외 기능 도입 이후 방문분).
         </p>
         {engagementError ? (
@@ -390,6 +405,13 @@ export default async function InvitationStatsAdminPage() {
               small
               unit="회"
               hint="소장용(신랑·신부) 방문 세션 수"
+            />
+            <StatCard
+              label="구분 전 방문"
+              value={engagement?.legacyVisits ?? 0}
+              small
+              unit="회"
+              hint="2026.09.11 이전 방문 — 하객/소장 미구분"
             />
             <StatCard
               label="축하하기"

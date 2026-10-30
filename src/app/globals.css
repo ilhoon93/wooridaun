@@ -329,6 +329,23 @@
   padding-bottom: 3rem;
 }
 
+/* 세로 모드(슬라이드 전환 효과 on) — 섹션이 처음 열릴 때 박스 전체가 한 번 은은하게
+ * 페이드인. 위치 이동 없이 투명도만 바꿔 '위로 움찔'하는 느낌을 없애고, 떠오르는
+ * 움직임은 요소별 순차 등장(.wd-anim)이 담당한다. */
+.wd-vfade {
+  opacity: 0;
+}
+.wd-vfade.wd-vfade-in {
+  animation: wd-vfade-in 1s ease-out forwards;
+}
+@keyframes wd-vfade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wd-vfade, .wd-vfade.wd-vfade-in { opacity: 1; animation: none; }
+}
+
 /* 세로 모드 첫 화면 "아래로" 안내 화살표 */
 @keyframes wd-bounce-y {
   0%, 100% { transform: translate(-50%, 0); }
