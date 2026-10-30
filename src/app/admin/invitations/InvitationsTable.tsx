@@ -39,6 +39,10 @@ export interface InvitationRow {
   ownerVisits?: number;
   /** 방명록 메시지 수(집계). 조회 실패 시 null. */
   guestbookCount?: number | null;
+  /** 넘기기 방식(편집본 기준). 조회 실패 시 null. */
+  slideDirection?: 'horizontal' | 'vertical' | null;
+  /** 슬라이드 전환 효과 사용 여부(편집본 기준). 조회 실패 시 null. */
+  slideAnimation?: boolean | null;
 }
 
 function statusOf(r: InvitationRow): {
@@ -130,13 +134,16 @@ export function InvitationsTable({
       </form>
 
       <div className="overflow-x-auto rounded-md border border-[#E8DCC9]">
-        <table className="w-full min-w-[720px] border-collapse text-[12px]">
+        <table className="w-full min-w-[780px] border-collapse text-[12px]">
           <thead>
             <tr className="bg-[#FAF7F2] text-[11px] text-[#8B7355]">
               <th className="px-2 py-1.5 text-left font-medium">최종 수정 / 생성</th>
               <th className="px-2 py-1.5 text-left font-medium">이메일</th>
               <th className="px-2 py-1.5 text-left font-medium">신랑 · 신부 / 예식일</th>
               <th className="px-2 py-1.5 text-center font-medium">상태</th>
+              <th className="px-2 py-1.5 text-center font-medium" title="넘기기 방식 · 슬라이드 전환 효과">
+                넘기기
+              </th>
               <th className="px-2 py-1.5 text-center font-medium" title="방명록 메시지 수">
                 방명록
               </th>
@@ -182,6 +189,29 @@ export function InvitationsTable({
                         </span>
                       )}
                     </div>
+                  </td>
+                  {/* 넘기기 방식 — 세로는 강조 배지, 전환 효과가 켜져 있으면 '효과' 표시. */}
+                  <td className="whitespace-nowrap px-2 py-1.5 text-center text-[11px]">
+                    {r.slideDirection == null ? (
+                      <span className="text-[#B0A088]">-</span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1">
+                        <span
+                          className={
+                            r.slideDirection === 'vertical'
+                              ? 'rounded-full bg-violet-50 px-1.5 py-0.5 text-[10px] font-medium text-violet-700 ring-1 ring-violet-200'
+                              : 'text-[#5C4633]'
+                          }
+                        >
+                          {r.slideDirection === 'vertical' ? '세로' : '가로'}
+                        </span>
+                        {r.slideAnimation && (
+                          <span className="text-[10px] text-[#B0A088]" title="슬라이드 전환 효과 사용">
+                            효과
+                          </span>
+                        )}
+                      </span>
+                    )}
                   </td>
                   <td className="whitespace-nowrap px-2 py-1.5 text-center tabular-nums">
                     {r.guestbookCount == null ? (
@@ -232,7 +262,7 @@ export function InvitationsTable({
             })}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-3 py-10 text-center text-xs text-[#8B7355]">
+                <td colSpan={7} className="px-3 py-10 text-center text-xs text-[#8B7355]">
                   알림장이 없습니다.
                 </td>
               </tr>

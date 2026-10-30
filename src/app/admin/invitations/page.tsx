@@ -119,11 +119,32 @@ export default async function AdminInvitationsPage({ searchParams }: PageProps) 
         }),
       );
 
+      // 넘기기 방식(가로/세로) + 슬라이드 전환 효과 — 편집본 content 의 theme 값만 JSON 경로로
+      // 가져온다(content 전체 전송 없음). 필드가 없는 기존 알림장은 기본값(가로·효과 off).
+      const themeById = new Map<string, { dir: string | null; anim: string | null }>();
+      const { data: themeRows } = await sb
+        .from('invitations')
+        .select('id, dir:content->theme->>slideDirection, anim:content->theme->>slideAnimation')
+        .in('id', ids);
+      for (const t of (themeRows ?? []) as unknown as {
+        id: string;
+        dir: string | null;
+        anim: string | null;
+      }[]) {
+        themeById.set(t.id, { dir: t.dir, anim: t.anim });
+      }
+
       rows = rows.map((r) => ({
         ...r,
         guestVisits: counts.get(r.id)?.guest ?? 0,
         ownerVisits: counts.get(r.id)?.owner ?? 0,
         guestbookCount: guestbookCounts.get(r.id) ?? null,
+        slideDirection: themeById.has(r.id)
+          ? themeById.get(r.id)?.dir === 'vertical'
+            ? 'vertical'
+            : 'horizontal'
+          : null,
+        slideAnimation: themeById.has(r.id) ? themeById.get(r.id)?.anim === 'true' : null,
       }));
     }
   } catch (e) {
