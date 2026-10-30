@@ -117,13 +117,13 @@ export function SlideContainer({
     let raf = 0;
     let idle: ReturnType<typeof setTimeout> | undefined;
 
-    // 멈춤 위치(scrollTop) 목록 — 각 섹션의 시작(화면 맨 위에 섹션 윗변이 오는 위치).
-    // 화면보다 긴 섹션(갤러리 등)은 그 안에서 화면 높이의 85% 간격으로, 그리고 섹션 끝이
-    // 화면 아래에 닿는 위치에서도 한 번 더 멈춰 다음 섹션까지 한 번에 넘어가지 않게 한다.
-    const computeStops = () => {
+    // 다음 멈춤 위치(scrollTop) 계산. 한 번에 최소 반 화면 ~ 최대 한 화면만큼 내려가도록
+    // 하고, 그 범위 안에 "섹션 시작(윗변이 화면 맨 위)" 또는 "긴 섹션의 끝(아랫변이 화면
+    // 맨 아래)" 이 있으면 그 위치에 맞춰 멈춘다(가장 가까운 것). 범위 안에 기준점이 없으면
+    // 화면 85% 만큼 내려간다. 끝까지 반 화면도 안 남으면 끝으로 바로 간다.
+    const nextStop = (cur: number) => {
       const vh = root.clientHeight;
-      const step = Math.round(vh * 0.85);
-      const stops: number[] = [];
+      const marks: number[] = [];
       let total = 0;
       slideRefs.current.forEach((el, i) => {
         if (!el) return;
@@ -131,20 +131,24 @@ export function SlideContainer({
         const h = el.offsetHeight;
         total = Math.max(total, top + h);
         if (i === 0) return;
-        stops.push(top);
-        const end = top + h - vh;
-        for (let y = top + step; y < end - 40; y += step) stops.push(y);
-        if (end > top + 40) stops.push(end);
+        marks.push(top);
+        if (h > vh) marks.push(top + h - vh);
       });
-      return { vh, stops, total };
+      const max = Math.max(0, total - vh);
+      const lo = cur + vh * 0.5;
+      const hi = cur + vh;
+      const inRange = marks.filter((m) => m >= lo && m <= hi).sort((x, y) => x - y);
+      let next = inRange.length > 0 ? inRange[0] : cur + Math.round(vh * 0.85);
+      if (max - next < vh * 0.5) next = max;
+      return { next: Math.min(next, max), max, vh };
     };
 
-    // 다음 멈춤 위치까지 한도를 늘린다. 남은 멈춤이 없으면 제한 해제(null).
+    // 다음 멈춤 위치까지 한도를 늘린다. 끝에 닿으면 제한 해제(null).
     const extendLimit = () => {
-      const { vh, stops, total } = computeStops();
-      const cur = limitRef.current ?? vh;
-      const next = stops.find((st) => st + vh > cur + 2);
-      if (next == null || next + vh >= total - 2) setLimit(null);
+      const vh = root.clientHeight;
+      const cur = (limitRef.current ?? vh) - vh;
+      const { next, max } = nextStop(cur);
+      if (next >= max - 2) setLimit(null);
       else setLimit(next + vh);
     };
 
