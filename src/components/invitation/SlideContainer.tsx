@@ -60,6 +60,7 @@ interface Props {
    * 넘기기 방식. 'horizontal'(기본) = 좌우 스와이프 트랙.
    * 'vertical' = 위아래로 이어지는 자연 스크롤. 첫 슬라이드(표지)는 한 화면
    * 높이로 고정하고, 마지막(엔딩)은 최소 한 화면, 그 사이 슬라이드는 내용 높이에 맞춘다(스냅 없음).
+   * 슬라이드 전환 효과가 켜져 있으면 처음 내려갈 때 구간마다 멈추고 등장 효과를 보여준다.
    */
   direction?: 'horizontal' | 'vertical';
 }
@@ -96,13 +97,18 @@ export function SlideContainer({
   // ── 세로 모드 전용 ────────────────────────────────────────
   const scrollerRef = useRef<HTMLDivElement>(null);
   const slideRefs = useRef<Array<HTMLDivElement | null>>([]);
-  // 지금까지 "열린" 마지막 슬라이드 인덱스. 세로 모드는 처음 내려갈 때 한 번에 끝까지
-  // 미끄러지지 않도록, 열린 슬라이드 + 바로 다음 1장까지만 렌더해 스크롤이 거기서
-  // 멈추게 한다. 스크롤이 멈추면 그 다음 장이 페이드인으로 열리고, 그 뒤 1장이 이어
-  // 붙는다. 한 번 열린 구간은 다시 올렸다 내려도 막힘 없이 자연스럽게 스크롤된다.
-  const [opened, setOpened] = useState(0);
-  const openedRef = useRef(opened);
-  openedRef.current = opened;
+  // 세로 + 슬라이드 전환 효과(slideReveal 중 하나라도 'none' 이 아님)일 때만 "구간 멈춤
+  // + 등장 효과" 를 쓴다. 효과를 끈 세로 모드는 모든 내용이 보이는 자연 스크롤 그대로.
+  const gateOn = isVertical && !!slideReveal?.some((m) => m !== 'none');
+  // 열린(등장 효과가 실행된) 슬라이드. 한 번 열리면 계속 열린 상태 → 다시 올렸다 내려도
+  // 효과가 반복되지 않고 막힘 없이 스크롤된다.
+  const [openSet, setOpenSet] = useState<ReadonlySet<number>>(() => new Set([0]));
+  // 스크롤 가능한 높이 한도(px). 트랙 높이를 이 값으로 잘라 그 아래로는 내려갈 수 없게
+  // 해서, 한 번에 크게 쓸어내려도 다음 구간에서 멈춘다. 스크롤이 멈추면 다음 구간까지
+  // 한도를 늘린다. null = 아직 측정 전 / 끝까지 열림(제한 없음).
+  const [limit, setLimit] = useState<number | null>(null);
+  const limitRef = useRef(limit);
+  limitRef.current = limit;
 
   useEffect(() => {
     if (!isVertical) return;
@@ -111,33 +117,72 @@ export function SlideContainer({
     let raf = 0;
     let idle: ReturnType<typeof setTimeout> | undefined;
 
-    // 스크롤이 멈췄을 때 — 다음 미개봉 슬라이드가 화면에 들어와 있으면 연다.
-    const tryOpenNext = () => {
-      const next = openedRef.current + 1;
-      if (next >= slidesLen) return;
-      const el = slideRefs.current[next];
-      if (!el) return;
-      const view = root.scrollTop + root.clientHeight;
-      const atBottom = view >= root.scrollHeight - 4;
-      if (atBottom || el.offsetTop < root.scrollTop + root.clientHeight * 0.8) {
-        setOpened(next);
-      }
+    // 멈춤 위치(scrollTop) 목록 — 각 섹션의 시작(화면 맨 위에 섹션 윗변이 오는 위치).
+    // 화면보다 긴 섹션(갤러리 등)은 그 안에서 화면 높이의 85% 간격으로, 그리고 섹션 끝이
+    // 화면 아래에 닿는 위치에서도 한 번 더 멈춰 다음 섹션까지 한 번에 넘어가지 않게 한다.
+    const computeStops = () => {
+      const vh = root.clientHeight;
+      const step = Math.round(vh * 0.85);
+      const stops: number[] = [];
+      let total = 0;
+      slideRefs.current.forEach((el, i) => {
+        if (!el) return;
+        const top = el.offsetTop;
+        const h = el.offsetHeight;
+        total = Math.max(total, top + h);
+        if (i === 0) return;
+        stops.push(top);
+        const end = top + h - vh;
+        for (let y = top + step; y < end - 40; y += step) stops.push(y);
+        if (end > top + 40) stops.push(end);
+      });
+      return { vh, stops, total };
     };
+
+    // 다음 멈춤 위치까지 한도를 늘린다. 남은 멈춤이 없으면 제한 해제(null).
+    const extendLimit = () => {
+      const { vh, stops, total } = computeStops();
+      const cur = limitRef.current ?? vh;
+      const next = stops.find((st) => st + vh > cur + 2);
+      if (next == null || next + vh >= total - 2) setLimit(null);
+      else setLimit(next + vh);
+    };
+
+    // 스크롤이 멈췄을 때 — 화면 위쪽 75% 안으로 들어온 슬라이드를 연다(등장 효과).
+    // 한도 끝에 닿아 멈췄다면 다음 구간까지 한도를 늘린다.
+    const onIdle = () => {
+      const line = root.scrollTop + root.clientHeight * 0.75;
+      setOpenSet((prev) => {
+        let next = prev;
+        slideRefs.current.forEach((el, i) => {
+          if (el && el.offsetTop < line && !next.has(i)) {
+            if (next === prev) next = new Set(prev);
+            (next as Set<number>).add(i);
+          }
+        });
+        return next;
+      });
+      const lim = limitRef.current;
+      if (lim != null && root.scrollTop + root.clientHeight >= lim - 4) extendLimit();
+    };
+
+    // 첫 한도 — 표지 다음 섹션의 시작 위치까지만.
+    if (gateOn && limitRef.current == null) extendLimit();
 
     const onScroll = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
-        // 현재 위치(첫 화면 '아래로' 안내 표시 여부용) — 화면 위쪽 40% 지점을 지난 마지막
-        // 슬라이드. 아직 렌더 안 된(display:none) 슬라이드는 offsetParent 가 없어 제외.
+        // 현재 위치(첫 화면 '아래로' 안내 표시 여부용) — 화면 위쪽 40% 지점을 지난 마지막 슬라이드.
         const line = root.scrollTop + root.clientHeight * 0.4;
         let cur = 0;
         slideRefs.current.forEach((el, i) => {
-          if (el && el.offsetParent && el.offsetTop <= line) cur = i;
+          if (el && el.offsetTop <= line) cur = i;
         });
         setIndex(cur);
       });
+      if (!gateOn) return;
       if (idle) clearTimeout(idle);
-      idle = setTimeout(tryOpenNext, 160);
+      idle = setTimeout(onIdle, 160);
     };
     root.addEventListener('scroll', onScroll, { passive: true });
     return () => {
@@ -145,7 +190,7 @@ export function SlideContainer({
       cancelAnimationFrame(raf);
       if (idle) clearTimeout(idle);
     };
-  }, [isVertical, slidesLen]);
+  }, [isVertical, gateOn, slidesLen]);
 
   // 세로 모드의 '아래로' 안내 클릭 — scrollIntoView 는 바깥 페이지(에디터)까지 스크롤할 수 있어
   // 스크롤러 안에서만 이동시킨다.
@@ -251,25 +296,29 @@ export function SlideContainer({
       {/* containerType size — 슬라이드 안의 cqh 단위가 한 화면 높이를 기준으로 잡히도록. */}
       <div
         ref={scrollerRef}
-        className="wd-hide-scroll absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-y-contain"
+        // overscroll-y-none — 한도/끝에 닿았을 때 튕겼다 되돌아오는(바운스) 움찔거림 제거.
+        className="wd-hide-scroll absolute inset-0 overflow-y-auto overflow-x-hidden overscroll-y-none"
         style={{ containerType: 'size' }}
       >
+        {/* 트랙 — 구간 멈춤이 켜지면 높이를 한도(limit)로 잘라 그 아래로 스크롤되지 않게 한다. */}
+        <div
+          className="relative"
+          style={gateOn && limit != null ? { height: limit, overflow: 'hidden' } : undefined}
+        >
         {slides.map((slide, i) => {
           const mode = slideReveal?.[i] ?? 'none';
           const modeClass =
             mode === 'together' ? ' wd-together' : mode === 'account' ? ' wd-account' : '';
-          const isOpen = i <= opened;
-          // 처음 열릴 때 한 번만 은은하게 떠오른다(클래스가 유지되므로 다시 스크롤해도
-          // 애니메이션이 반복되지 않음). 슬라이드 전환 효과(순차 등장)가 켜진 슬라이드는
-          // 그 효과가 대신 담당한다. 표지는 효과 없음.
+          const isOpen = openSet.has(i);
+          // 전환 효과가 켜진 슬라이드는 처음 열릴 때 한 번, 박스 전체 페이드인(.wd-vfade —
+          // 위치 이동 없이 투명도만) + 요소별 순차 떠오르기(.wd-anim) 를 함께 적용. 클래스가
+          // 유지되므로 다시 스크롤해도 반복되지 않는다. 효과 off / 표지는 그대로 노출.
           const revealClass =
-            i === 0
+            !gateOn || mode === 'none'
               ? ''
-              : mode === 'none'
-                ? `wd-vfade${isOpen ? ' wd-vfade-in' : ''}`
-                : `wd-anim${modeClass}${isOpen ? ' wd-reveal' : ''}`;
-          // 열린 슬라이드 + 바로 다음 1장까지만 렌더 → 스크롤이 그 장에서 멈춘다.
-          const isRendered = i <= opened + 1;
+              : `wd-vfade${isOpen ? ' wd-vfade-in' : ''} wd-anim${modeClass}${
+                  isOpen ? ' wd-reveal' : ''
+                }`;
           const isCover = i === 0;
           const isLast = i === slidesLen - 1;
           return (
@@ -288,14 +337,16 @@ export function SlideContainer({
               }${revealClass ? ` ${revealClass}` : ''}`}
               style={{
                 containerType: isCover ? 'size' : 'inline-size',
-                // 아직 차례가 안 된 슬라이드는 숨겨 스크롤 범위에서 뺀다.
-                ...(isRendered ? {} : { display: 'none' }),
+                // 트랙 안에서 표지 h-full 이 스크롤러(한 화면) 높이를 따르도록.
+                ...(isCover ? { height: '100cqh' } : {}),
+                ...(isLast ? { minHeight: '100cqh' } : {}),
               }}
             >
               {slide}
             </div>
           );
         })}
+        </div>
       </div>
 
       {/* 꽃잎 등 배경 효과 — 세로 모드에선 화면 위에 한 겹으로 고정(슬라이드 길이와 무관). */}
