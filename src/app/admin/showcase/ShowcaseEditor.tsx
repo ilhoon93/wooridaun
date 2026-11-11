@@ -367,10 +367,28 @@ export function ShowcaseEditor({
                       on ? 'border-[1.5px] border-[#B5614F]' : 'border-[#E8DCC9] hover:border-[#8B7355]'
                     }`}
                   >
-                    <div className="grid aspect-[3/4] w-full place-items-center bg-[#FAF7F2]">
+                    <div className="relative grid aspect-[3/4] w-full place-items-center overflow-hidden bg-[#FAF7F2]">
                       {c.hasPhoto ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={c.heroImage} alt="" className="h-full w-full object-cover" />
+                      ) : c.content ? (
+                        // 사진 없는 디자인 — 실제 표지(메인) 디자인을 축소 미리보기로.
+                        <div className="pointer-events-none absolute inset-0">
+                          <InvitationPreview
+                            design={{
+                              id: c.id,
+                              name: '',
+                              layoutLabel: '',
+                              groomName: c.groomName,
+                              brideName: c.brideName,
+                              weddingDate: c.weddingDate,
+                              content: c.content,
+                            }}
+                            cover
+                            coverOnly
+                            staticPreview
+                          />
+                        </div>
                       ) : (
                         <span className="px-1 text-center text-[10px] leading-tight text-[#B09B80]">
                           🎨 사진 없는

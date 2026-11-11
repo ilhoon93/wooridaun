@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button';
 import { COLOR_THEME_LABELS, type ColorTheme } from '@/lib/theme';
 import { SNAP_CATALOG } from '@/lib/snap/catalog';
 import { ARCHIVE_PRICE, formatKRW } from '@/lib/snap/packages';
-import { formatKstDate } from '@/lib/utils/datetime';
+import { formatKstDate, formatKstDateTime } from '@/lib/utils/datetime';
 import { computePageItems } from '@/lib/utils/pagination';
 import { ImageCardGenerator } from '@/components/mypage/ImageCardGenerator';
 import { submitReviewEvent } from './review-event-actions';
+import { saveInvitationLabel } from './label-actions';
 
 // snap_jobs / snap_anchor_history 응답 타입 — API 가 돌려주는 raw shape.
 interface SnapJob {
@@ -88,6 +89,8 @@ export interface MyPageInvitation {
   layout: string | null;
   /** 디자인 색상 테마 키 (cream / sky / lavender 등). */
   colorTheme: string | null;
+  /** 사용자가 붙인 이름 태그(구분용). 없으면 null. */
+  label: string | null;
   publications: MyPagePublication[];
 }
 
@@ -1450,6 +1453,126 @@ function SavedTab({
   );
 }
 
+const LABEL_MAX = 20;
+
+/**
+ * 알림장 이름 태그 — 사용자가 직접 붙여 어떤 알림장인지 구분. 태그가 없으면 '+ 이름 태그'
+ * 버튼만, 있으면 태그 칩(눌러서 수정). 저장은 invitation_labels(별도 테이블)라 알림장의
+ * 최종 수정 시각은 바뀌지 않는다. 빈 값으로 저장하면 태그를 지운다.
+ */
+function InvitationLabelTag({
+  invitationId,
+  initial,
+}: {
+  invitationId: string;
+  initial: string | null;
+}) {
+  const [label, setLabel] = useState<string | null>(initial);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(initial ?? '');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLabel(initial);
+  }, [initial]);
+
+  const save = async () => {
+    if (saving) return;
+    const next = draft.trim();
+    if (next === (label ?? '')) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    setErr(null);
+    const res = await saveInvitationLabel({ invitationId, label: next });
+    setSaving(false);
+    if (!res.ok) {
+      setErr(res.error);
+      return;
+    }
+    setLabel(res.label);
+    setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <div className="mt-1 flex flex-col gap-1">
+        <div className="flex items-center gap-1.5">
+          <input
+            autoFocus
+            value={draft}
+            maxLength={LABEL_MAX}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                void save();
+              } else if (e.key === 'Escape') {
+                setDraft(label ?? '');
+                setEditing(false);
+              }
+            }}
+            placeholder="예: 본식용, 부모님용, 테스트"
+            aria-label="알림장 이름 태그"
+            className="h-8 w-full max-w-[220px] min-w-0 rounded-md border border-[#D4C5B0] bg-white px-2 text-[13px] focus:border-[#8B7355] focus:outline-none"
+          />
+          <button
+            type="button"
+            onClick={() => void save()}
+            disabled={saving}
+            className="h-8 shrink-0 rounded-md bg-[#8B7355] px-2.5 text-[12px] font-medium text-white disabled:opacity-50"
+          >
+            {saving ? '저장 중' : '저장'}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(label ?? '');
+              setEditing(false);
+              setErr(null);
+            }}
+            disabled={saving}
+            className="h-8 shrink-0 px-1.5 text-[12px] text-muted-foreground"
+          >
+            취소
+          </button>
+        </div>
+        <span className="text-[11px] text-muted-foreground">
+          {err ?? `최대 ${LABEL_MAX}자 · 비우고 저장하면 태그가 지워져요`}
+        </span>
+      </div>
+    );
+  }
+
+  return label ? (
+    <button
+      type="button"
+      onClick={() => {
+        setDraft(label);
+        setEditing(true);
+      }}
+      title="이름 태그 수정"
+      className="mt-1 inline-flex max-w-full items-center gap-1 self-start rounded-full bg-[#3D2E1F] px-2.5 py-0.5 text-[12px] font-medium text-white"
+    >
+      <span aria-hidden>🏷</span>
+      <span className="truncate">{label}</span>
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={() => {
+        setDraft('');
+        setEditing(true);
+      }}
+      className="mt-1 self-start rounded-full border border-dashed border-[#D4C5B0] px-2.5 py-0.5 text-[11px] text-[#8B7355] hover:border-[#8B7355]"
+    >
+      + 이름 태그
+    </button>
+  );
+}
+
 function SavedRow({
   inv,
   busy,
@@ -1490,9 +1613,10 @@ function SavedRow({
           <div className="flex items-start justify-between gap-2">
             <div className="flex min-w-0 flex-col">
               <h3 className="truncate text-base font-medium text-[#3D2E1F]">{title}</h3>
+              <InvitationLabelTag invitationId={inv.id} initial={inv.label} />
               <p className="text-xs text-muted-foreground">
                 {inv.weddingDate ?? '결혼식 날짜 미정'}
-                {' · '}최종 수정 {formatDate(inv.updatedAt)}
+                {' · '}최종 수정 {formatKstDateTime(inv.updatedAt, { year: 'numeric' })}
               </p>
               {/* 레이아웃 + 디자인 색 — 작은 메타 라벨로 한 줄 표시. */}
               {(inv.layout || inv.colorTheme) && (

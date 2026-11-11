@@ -13,7 +13,6 @@ import {
   Noto_Sans_KR,
   Noto_Serif_KR,
   Pinyon_Script,
-  Playfair_Display,
   Song_Myung,
 } from 'next/font/google';
 // 참고: Jeju Myeongjo 는 next/font/google 14.2 에서 함수가 아직 노출되지
@@ -103,9 +102,14 @@ const songMyung = Song_Myung({
  * Korean 폰트와는 별도 그룹으로, 한글 콘텐츠가 아닌 영문 카피
  * ("We are getting married" 등) 에만 적용된다.
  * ───────────────────────────────────────────────────────────────────── */
-const playfairDisplay = Playfair_Display({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
+// Playfair Display 는 Google Fonts 가 간헐적으로 확장자 없는 파일 URL
+// (fonts.gstatic.com/l/font?kit=...) 을 돌려줘 Next 14.2 의 next/font/google 빌드가
+// 실패한다(loader 가 확장자를 정규식으로 꺼내다 null). 그래서 같은 폰트(OFL, v40
+// latin 가변 woff2, wght 400–900)를 로컬 파일로 자체 호스팅한다. CSS 변수명은 동일.
+const playfairDisplay = localFont({
+  src: './fonts/english/PlayfairDisplay-Variable-latin.woff2',
+  weight: '400 900',
+  style: 'normal',
   variable: '--font-playfair-display',
   display: 'swap',
 });

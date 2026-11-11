@@ -61,6 +61,19 @@ export default async function MyPage() {
       .maybeSingle(),
   ]);
 
+  // 알림장 이름 태그(마이그 079) — 별도 조회. 테이블이 없거나 실패해도 목록은 정상 표시.
+  const labelById = new Map<string, string>();
+  {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: labels } = await (supabase as any)
+      .from('invitation_labels')
+      .select('invitation_id, label')
+      .eq('user_id', user.id);
+    for (const l of (labels ?? []) as { invitation_id: string; label: string }[]) {
+      labelById.set(l.invitation_id, l.label);
+    }
+  }
+
   const pubsByInvitation = new Map<string, MyPagePublication[]>();
   for (const p of pubs ?? []) {
     const arr = pubsByInvitation.get(p.invitation_id) ?? [];
@@ -104,6 +117,7 @@ export default async function MyPage() {
       heroImage: meta.heroImage,
       layout: meta.layout,
       colorTheme: meta.colorTheme,
+      label: labelById.get(i.id) ?? null,
       publications: pubsByInvitation.get(i.id) ?? [],
     };
   });
