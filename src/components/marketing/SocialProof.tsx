@@ -47,12 +47,17 @@ export function SocialProof({
   const baseReviews = config.reviews.filter((r) => r.caption.trim() || r.rating > 0);
   // 리뷰 순서는 방문 세션마다 무작위로 섞는다(같은 세션 안에서는 유지). 훅이라
   // 아래 early return 보다 먼저 호출한다.
-  const reviewOrder = useSessionShuffle(baseReviews.length);
+  const reviewOrder = useSessionShuffle(baseReviews.length, REVIEW_SEED_KEY);
+  // 쇼케이스(고객 알림장 디자인) 커버도 세션마다 무작위 순서 — 리뷰와 별도 시드.
+  const baseCovers = (config.covers ?? []).filter((c) => !c.hidden);
+  const coverOrder = useSessionShuffle(baseCovers.length, COVER_SEED_KEY);
   if (!config.enabled) return null;
   const reviews = reviewOrder
     ? reviewOrder.map((i) => baseReviews[i]).filter(Boolean)
     : baseReviews;
-  const covers = (config.covers ?? []).filter((c) => !c.hidden);
+  const covers = coverOrder
+    ? coverOrder.map((i) => baseCovers[i]).filter(Boolean)
+    : baseCovers;
   const designImages = config.designs.filter((d) => d.imageUrl.trim());
   // 디자인 마퀴 = config 렌더 커버(스티커 익명화된 실제 고객 디자인) + 레거시 업로드 이미지.
   const hasDesigns = covers.length > 0 || designImages.length > 0;
@@ -531,6 +536,7 @@ function FlickerNumber({
 }
 
 const REVIEW_SEED_KEY = 'wd-review-order-seed';
+const COVER_SEED_KEY = 'wd-cover-order-seed';
 
 /**
  * 세션 단위 무작위 순서 — sessionStorage 에 시드를 두고 그 시드로 섞어, 새로고침해도
@@ -538,7 +544,7 @@ const REVIEW_SEED_KEY = 'wd-review-order-seed';
  * 원래 순서(null)로 그려 hydration 불일치를 피하고, 마운트 후 섞은 순서로 바꾼다.
  * sessionStorage 를 쓸 수 없는 환경(사파리 프라이빗 등)에서는 매번 새로 섞는다.
  */
-function useSessionShuffle(length: number): number[] | null {
+function useSessionShuffle(length: number, storageKey: string): number[] | null {
   const [order, setOrder] = useState<number[] | null>(null);
   useEffect(() => {
     if (length < 2) {
@@ -547,9 +553,9 @@ function useSessionShuffle(length: number): number[] | null {
     }
     let seed = Math.floor(Math.random() * 2 ** 31);
     try {
-      const saved = sessionStorage.getItem(REVIEW_SEED_KEY);
+      const saved = sessionStorage.getItem(storageKey);
       if (saved && Number.isFinite(Number(saved))) seed = Number(saved);
-      else sessionStorage.setItem(REVIEW_SEED_KEY, String(seed));
+      else sessionStorage.setItem(storageKey, String(seed));
     } catch {
       // 저장소 접근 불가 — 이번 렌더용 시드로만 섞는다.
     }
@@ -568,6 +574,6 @@ function useSessionShuffle(length: number): number[] | null {
       [idx[i], idx[j]] = [idx[j], idx[i]];
     }
     setOrder(idx);
-  }, [length]);
+  }, [length, storageKey]);
   return order;
 }
