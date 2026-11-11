@@ -161,19 +161,20 @@ function Tab({
   );
 }
 
-/** 전화·문자 버튼 — tel:/sms: 링크. 계좌 카드와 같은 흰 배경으로 어두운 테마에서도 보인다. */
+/**
+ * 전화·문자 버튼 — tel:/sms: 링크. 아이콘만 표시하는 원형 버튼(텍스트는 aria-label 로
+ * 스크린리더에만 제공). 계좌 카드와 같은 흰 배경이라 어두운 테마에서도 보인다.
+ */
 function ContactButtons({ phone, label }: { phone: string; label: string }) {
   const cls =
-    'inline-flex h-7 items-center gap-1 rounded-full bg-white px-2.5 text-[11px] font-medium text-stone-700 ring-1 ring-stone-200 transition-colors hover:bg-stone-50';
+    'inline-grid h-8 w-8 place-items-center rounded-full bg-white text-stone-700 ring-1 ring-stone-200 transition-colors hover:bg-stone-50';
   return (
     <div className="flex shrink-0 items-center gap-1.5">
-      <a href={`tel:${phone}`} aria-label={`${label}에게 전화하기`} className={cls}>
+      <a href={`tel:${phone}`} aria-label={`${label}에게 전화하기`} title="전화" className={cls}>
         <PhoneIcon />
-        전화
       </a>
-      <a href={`sms:${phone}`} aria-label={`${label}에게 문자 보내기`} className={cls}>
+      <a href={`sms:${phone}`} aria-label={`${label}에게 문자 보내기`} title="문자" className={cls}>
         <MessageIcon />
-        문자
       </a>
     </div>
   );
@@ -181,7 +182,7 @@ function ContactButtons({ phone, label }: { phone: string; label: string }) {
 
 function PhoneIcon() {
   return (
-    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
     </svg>
   );
@@ -189,7 +190,7 @@ function PhoneIcon() {
 
 function MessageIcon() {
   return (
-    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
   );
