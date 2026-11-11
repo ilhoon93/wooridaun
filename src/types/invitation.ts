@@ -700,6 +700,27 @@ export const ACCOUNT_PARTY_KEYS = [
 ] as const;
 export type AccountPartyKey = (typeof ACCOUNT_PARTY_KEYS)[number];
 
+// 계좌 슬라이드 연락처 — 사람(party)별 전화번호 1개. 하객에게는 번호 대신 전화·문자
+// 버튼만 노출한다. 입력 중 형식이 어긋나도 저장이 막히지 않도록 길이만 제한하고,
+// 렌더 시 숫자/+ 만 남겨 tel:/sms: 링크로 쓴다.
+export const AccountContactsSchema = z
+  .object({
+    groom: z.string().max(20).default(''),
+    bride: z.string().max(20).default(''),
+    groomFather: z.string().max(20).default(''),
+    groomMother: z.string().max(20).default(''),
+    brideFather: z.string().max(20).default(''),
+    brideMother: z.string().max(20).default(''),
+  })
+  .default({
+    groom: '',
+    bride: '',
+    groomFather: '',
+    groomMother: '',
+    brideFather: '',
+    brideMother: '',
+  });
+
 export const AccountSectionSchema = z
   .object({
     enabled: z.boolean().default(true),
@@ -719,6 +740,12 @@ export const AccountSectionSchema = z
      * 구버전 호환 위해 optional + 기본 false(=기존처럼 탭 분리) → 기존 알림장 무영향.
      */
     combined: z.boolean().default(false),
+    /**
+     * true 면 계좌 슬라이드 각 사람 이름 옆에 전화·문자 버튼을 노출(연락처가 입력된 사람만).
+     * 구버전 호환 위해 기본 false → 기존 알림장 무영향.
+     */
+    showContacts: z.boolean().default(false),
+    contacts: AccountContactsSchema,
   })
   .default({
     enabled: true,
@@ -730,6 +757,15 @@ export const AccountSectionSchema = z
     brideFather: [],
     brideMother: [],
     combined: false,
+    showContacts: false,
+    contacts: {
+      groom: '',
+      bride: '',
+      groomFather: '',
+      groomMother: '',
+      brideFather: '',
+      brideMother: '',
+    },
   });
 
 // ── 슬라이드 상단 섹션 헤더(영문 라벨 + 한글 제목) ──────────

@@ -30,6 +30,19 @@ export function AccountEditor({ drag }: { drag?: SectionDragProps }) {
   const setParty = (party: AccountPartyKey, list: BankAccount[]) =>
     patch('account', { ...account, [party]: list });
 
+  // 연락처(사람별 1개) — 옵션 on 일 때만 입력란 노출. 구버전 데이터는 contacts 가 없을 수 있어 폴백.
+  const showContacts = account.showContacts ?? false;
+  const contacts = account.contacts ?? {
+    groom: '',
+    bride: '',
+    groomFather: '',
+    groomMother: '',
+    brideFather: '',
+    brideMother: '',
+  };
+  const setContact = (party: AccountPartyKey, value: string) =>
+    patch('account', { ...account, contacts: { ...contacts, [party]: value } });
+
   // 신랑·신부 본인은 meta 에서, 부모님은 basic.family 에서 이름을 끌어와
   // 새 계좌 추가 시 예금주에 자동 매핑.
   const holderFor = (party: AccountPartyKey): string => {
@@ -92,6 +105,23 @@ export function AccountEditor({ drag }: { drag?: SectionDragProps }) {
           </span>
         </label>
 
+        {/* 연락처 표시 — 켜면 사람별 연락처 입력란이 생기고, 알림장에는 이름 옆 전화·문자 버튼으로 노출. */}
+        <label className="flex items-start gap-2 rounded-md border bg-background px-3 py-2.5">
+          <input
+            type="checkbox"
+            checked={showContacts}
+            onChange={(e) => patch('account', { ...account, showContacts: e.target.checked })}
+            className="mt-0.5"
+          />
+          <span className="flex flex-col">
+            <span className="text-sm font-medium">연락처 표시</span>
+            <span className="text-xs text-muted-foreground">
+              켜면 사람별로 연락처를 입력할 수 있어요. 알림장에는 번호 대신 이름 옆 &lsquo;전화·문자&rsquo;
+              버튼으로 보이며, 계좌가 없어도 연락처만 있으면 표시됩니다.
+            </span>
+          </span>
+        </label>
+
         <div className="flex flex-col gap-3">
           <h3 className="text-sm font-semibold">신랑 측</h3>
           {groomKeys.map((party) => (
@@ -101,6 +131,8 @@ export function AccountEditor({ drag }: { drag?: SectionDragProps }) {
               list={account[party]}
               defaultHolder={holderFor(party)}
               onChange={(l) => setParty(party, l)}
+              contact={showContacts ? contacts[party] ?? '' : undefined}
+              onContactChange={(v) => setContact(party, v)}
             />
           ))}
         </div>
@@ -114,6 +146,8 @@ export function AccountEditor({ drag }: { drag?: SectionDragProps }) {
               list={account[party]}
               defaultHolder={holderFor(party)}
               onChange={(l) => setParty(party, l)}
+              contact={showContacts ? contacts[party] ?? '' : undefined}
+              onContactChange={(v) => setContact(party, v)}
             />
           ))}
         </div>
@@ -127,12 +161,17 @@ function PartyEditor({
   list,
   defaultHolder,
   onChange,
+  contact,
+  onContactChange,
 }: {
   label: string;
   list: BankAccount[];
   /** 기본정보에서 끌어온 예금주 이름 — 신규 행 추가 시 자동 채움. */
   defaultHolder: string;
   onChange: (next: BankAccount[]) => void;
+  /** 연락처 — undefined 면 입력란 숨김(연락처 표시 off). */
+  contact?: string;
+  onContactChange: (next: string) => void;
 }) {
   const updateAt = (i: number, next: BankAccount) => {
     const copy = [...list];
@@ -163,6 +202,23 @@ function PartyEditor({
           + 추가
         </Button>
       </div>
+
+      {contact !== undefined && (
+        <label className="flex items-center gap-2">
+          <span className="shrink-0 text-xs font-medium text-muted-foreground">📞 연락처</span>
+          <input
+            type="tel"
+            inputMode="tel"
+            autoComplete="off"
+            value={contact}
+            maxLength={20}
+            placeholder="010-1234-5678"
+            aria-label={`${label} 연락처`}
+            onChange={(e) => onContactChange(e.target.value)}
+            className="h-8 w-full min-w-0 rounded border border-input bg-background px-2 text-sm outline-none focus:border-ring focus:ring-2 focus:ring-ring/30"
+          />
+        </label>
+      )}
 
       {/* 계좌 입력 — 2 줄 레이아웃.
             1) 은행(한글 6자) + 예금주(한글 6자) + × 삭제
