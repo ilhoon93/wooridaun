@@ -13,7 +13,7 @@ import { VideoSlide } from './slides/VideoSlide';
 import { QuizSlide } from './slides/QuizSlide';
 import { VoteSlide } from './slides/VoteSlide';
 import { GuestbookSlide } from './slides/GuestbookSlide';
-import { AccountSlide } from './slides/AccountSlide';
+import { AccountSlide, normalizePhone } from './slides/AccountSlide';
 import { ClosingSlide } from './slides/ClosingSlide';
 
 export interface OwnerData {
@@ -184,7 +184,10 @@ export function InvitationSlides({
         content.account.brideMother.length > 0 ||
         // 등록된 계좌가 없어도 안내문구만 있으면 슬라이드 노출
         // (예: "축의금은 정중히 사양합니다" 안내).
-        content.account.guide.trim().length > 0) ? (
+        content.account.guide.trim().length > 0 ||
+        // 연락처 표시가 켜져 있고 연락처가 하나라도 있으면 노출.
+        (content.account.showContacts &&
+          Object.values(content.account.contacts ?? {}).some((v) => !!normalizePhone(v)))) ? (
         <AccountSlide account={content.account} header={hdr('account')} />
       ) : null,
     closing: (

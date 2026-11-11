@@ -4,6 +4,7 @@ import { useState } from 'react';
 import type {
   InvitationContent,
   BankAccount,
+  AccountPartyKey,
   ResolvedSectionHeader,
 } from '@/types/invitation';
 import { SectionHeader } from './SectionHeader';
@@ -11,10 +12,31 @@ import { SectionHeader } from './SectionHeader';
 interface PartyGroup {
   label: string;
   accounts: BankAccount[];
+  /** tel:/sms: 에 쓸 정규화된 번호. 연락처 표시 off 이거나 미입력이면 null. */
+  phone: string | null;
 }
 
 const isComplete = (a: BankAccount) =>
   a.bank.trim() && a.number.trim() && a.holder.trim();
+
+/** 전화번호 정규화 — 숫자와 맨 앞 + 만 남긴다. 숫자가 너무 짧으면 null. */
+export function normalizePhone(raw: string | undefined | null): string | null {
+  const t = (raw ?? '').trim();
+  const digits = t.replace(/[^0-9]/g, '');
+  if (digits.length < 7) return null;
+  return t.startsWith('+') ? `+${digits}` : digits;
+}
+
+const GROOM_PARTIES: Array<[AccountPartyKey, string]> = [
+  ['groom', '신랑'],
+  ['groomFather', '신랑 아버지'],
+  ['groomMother', '신랑 어머니'],
+];
+const BRIDE_PARTIES: Array<[AccountPartyKey, string]> = [
+  ['bride', '신부'],
+  ['brideFather', '신부 아버지'],
+  ['brideMother', '신부 어머니'],
+];
 
 export function AccountSlide({
   account,
@@ -25,17 +47,19 @@ export function AccountSlide({
 }) {
   const [side, setSide] = useState<'groom' | 'bride'>('groom');
 
-  const groomGroups: PartyGroup[] = [
-    { label: '신랑', accounts: account.groom.filter(isComplete) },
-    { label: '신랑 아버지', accounts: account.groomFather.filter(isComplete) },
-    { label: '신랑 어머니', accounts: account.groomMother.filter(isComplete) },
-  ].filter((g) => g.accounts.length > 0);
+  // 연락처 표시(옵션, 기본 off)가 켜져 있으면 계좌가 없어도 연락처가 있는 사람은 노출.
+  const showContacts = account.showContacts ?? false;
+  const toGroups = (parties: Array<[AccountPartyKey, string]>): PartyGroup[] =>
+    parties
+      .map(([key, label]) => ({
+        label,
+        accounts: account[key].filter(isComplete),
+        phone: showContacts ? normalizePhone(account.contacts?.[key]) : null,
+      }))
+      .filter((g) => g.accounts.length > 0 || g.phone);
 
-  const brideGroups: PartyGroup[] = [
-    { label: '신부', accounts: account.bride.filter(isComplete) },
-    { label: '신부 아버지', accounts: account.brideFather.filter(isComplete) },
-    { label: '신부 어머니', accounts: account.brideMother.filter(isComplete) },
-  ].filter((g) => g.accounts.length > 0);
+  const groomGroups = toGroups(GROOM_PARTIES);
+  const brideGroups = toGroups(BRIDE_PARTIES);
 
   const groups = side === 'groom' ? groomGroups : brideGroups;
   // combined=true 면 탭 없이 신랑·신부 계좌를 한 화면에 함께 표시(옵션, 기본 false).
@@ -93,12 +117,18 @@ export function AccountSlide({
       <div className="flex flex-col gap-4">
         {activeGroups.map((group) => (
           <div key={group.label} className="flex flex-col gap-2">
-            <h3 className="text-xs font-medium opacity-70">{group.label}</h3>
-            <ul className="flex flex-col gap-2">
-              {group.accounts.map((acct, i) => (
-                <AccountRow key={i} acct={acct} />
-              ))}
-            </ul>
+            {/* 사람 이름 + (연락처 표시 시) 전화·문자 버튼. 번호 숫자는 노출하지 않는다. */}
+            <div className="flex min-h-[28px] items-center justify-between gap-2">
+              <h3 className="text-xs font-medium opacity-70">{group.label}</h3>
+              {group.phone && <ContactButtons phone={group.phone} label={group.label} />}
+            </div>
+            {group.accounts.length > 0 && (
+              <ul className="flex flex-col gap-2">
+                {group.accounts.map((acct, i) => (
+                  <AccountRow key={i} acct={acct} />
+                ))}
+              </ul>
+            )}
           </div>
         ))}
       </div>
@@ -128,6 +158,40 @@ function Tab({
     >
       {children}
     </button>
+  );
+}
+
+/** 전화·문자 버튼 — tel:/sms: 링크. 계좌 카드와 같은 흰 배경으로 어두운 테마에서도 보인다. */
+function ContactButtons({ phone, label }: { phone: string; label: string }) {
+  const cls =
+    'inline-flex h-7 items-center gap-1 rounded-full bg-white px-2.5 text-[11px] font-medium text-stone-700 ring-1 ring-stone-200 transition-colors hover:bg-stone-50';
+  return (
+    <div className="flex shrink-0 items-center gap-1.5">
+      <a href={`tel:${phone}`} aria-label={`${label}에게 전화하기`} className={cls}>
+        <PhoneIcon />
+        전화
+      </a>
+      <a href={`sms:${phone}`} aria-label={`${label}에게 문자 보내기`} className={cls}>
+        <MessageIcon />
+        문자
+      </a>
+    </div>
+  );
+}
+
+function PhoneIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  );
+}
+
+function MessageIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
   );
 }
 
