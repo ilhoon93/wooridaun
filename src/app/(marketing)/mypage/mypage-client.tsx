@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { COLOR_THEME_LABELS, type ColorTheme } from '@/lib/theme';
 import { SNAP_CATALOG } from '@/lib/snap/catalog';
 import { ARCHIVE_PRICE, formatKRW } from '@/lib/snap/packages';
-import { formatKstDate, formatKstDateTime } from '@/lib/utils/datetime';
+import { formatKstDate } from '@/lib/utils/datetime';
 import { computePageItems } from '@/lib/utils/pagination';
 import { ImageCardGenerator } from '@/components/mypage/ImageCardGenerator';
 import { submitReviewEvent } from './review-event-actions';
@@ -1455,6 +1455,23 @@ function SavedTab({
 
 const LABEL_MAX = 20;
 
+/** KST 기준 'YY.MM.DD HH:mm'(24시) — 마이페이지 카드 한 줄 표시용. 잘못된 값이면 '-'. */
+function formatCompactKstDateTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '-';
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Seoul',
+    year: '2-digit',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(d);
+  const get = (t: Intl.DateTimeFormatPartTypes) => parts.find((p) => p.type === t)?.value ?? '';
+  return `${get('year')}.${get('month')}.${get('day')} ${get('hour')}:${get('minute')}`;
+}
+
 /**
  * 알림장 이름 태그 — 사용자가 직접 붙여 어떤 알림장인지 구분. 태그가 없으면 '+ 이름 태그'
  * 버튼만, 있으면 태그 칩(눌러서 수정). 저장은 invitation_labels(별도 테이블)라 알림장의
@@ -1614,9 +1631,10 @@ function SavedRow({
             <div className="flex min-w-0 flex-col">
               <h3 className="truncate text-base font-medium text-[#3D2E1F]">{title}</h3>
               <InvitationLabelTag invitationId={inv.id} initial={inv.label} />
-              <p className="text-xs text-muted-foreground">
-                {inv.weddingDate ?? '결혼식 날짜 미정'}
-                {' · '}최종 수정 {formatKstDateTime(inv.updatedAt, { year: 'numeric' })}
+              {/* 모바일에서도 한 줄 — 줄바꿈 없이, 넘치면 말줄임. 최종 수정은 24시 형식. */}
+              <p className="truncate whitespace-nowrap text-xs text-muted-foreground">
+                {inv.weddingDate ?? '날짜 미정'}
+                {' · '}최종 수정 {formatCompactKstDateTime(inv.updatedAt)}
               </p>
               {/* 레이아웃 + 디자인 색 — 작은 메타 라벨로 한 줄 표시. */}
               {(inv.layout || inv.colorTheme) && (
