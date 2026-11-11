@@ -24,7 +24,33 @@ export default async function AdminUsersPage() {
 
   const sb = createAdminClient();
   const { data, error } = await sb.rpc('admin_user_overview');
-  const rows = (Array.isArray(data) ? data : []) as AdminUserRow[];
+  const baseRows = (Array.isArray(data) ? data : []) as AdminUserRow[];
+
+  // 쇼케이스 활용 동의 현황 — 관리자 추가(079) / 포토리뷰 이벤트 참여 / 알림장별 동의.
+  // 각 조회는 실패해도 목록 표시에는 영향 없도록 개별로 무시한다.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const loose = sb as any;
+  const [addedRes, eventRes, invConsentRes] = await Promise.all([
+    loose.from('showcase_consent_users').select('user_id'),
+    loose.from('review_event_submissions').select('user_id'),
+    loose.from('invitations').select('user_id').eq('showcase_consent', true),
+  ]);
+  const consentTableReady = !addedRes.error;
+  const added = new Set<string>(
+    ((addedRes.data ?? []) as { user_id: string }[]).map((r) => r.user_id),
+  );
+  const viaEvent = new Set<string>(
+    ((eventRes.data ?? []) as { user_id: string }[]).map((r) => r.user_id),
+  );
+  const viaInvitation = new Set<string>(
+    ((invConsentRes.data ?? []) as { user_id: string }[]).map((r) => r.user_id),
+  );
+  const rows: AdminUserRow[] = baseRows.map((r) => ({
+    ...r,
+    showcaseAdded: added.has(r.user_id),
+    showcaseViaEvent: viaEvent.has(r.user_id),
+    showcaseViaInvitation: viaInvitation.has(r.user_id),
+  }));
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-24 pt-6 sm:px-6">
@@ -45,7 +71,7 @@ export default async function AdminUsersPage() {
           (마이그레이션 044 가 적용되었는지 확인해주세요.)
         </p>
       ) : (
-        <UsersTable rows={rows} />
+        <UsersTable rows={rows} consentTableReady={consentTableReady} />
       )}
     </main>
   );

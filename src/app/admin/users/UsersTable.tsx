@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { adjustCredits } from './actions';
+import { adjustCredits, setShowcaseConsentUser } from './actions';
 import { formatKstDate } from '@/lib/utils/datetime';
 
 export interface AdminUserRow {
@@ -14,6 +14,12 @@ export interface AdminUserRow {
   snap_balance: number;
   order_count: number;
   order_amount: number;
+  /** 운영자가 쇼케이스 활용 동의로 직접 추가(마이그 079). */
+  showcaseAdded?: boolean;
+  /** 포토리뷰 이벤트 참여로 동의(계정 단위). */
+  showcaseViaEvent?: boolean;
+  /** 알림장별 홈 노출 동의(showcase_consent)가 하나 이상. */
+  showcaseViaInvitation?: boolean;
 }
 
 type CreditKind = 'publish' | 'archive' | 'snap';
@@ -28,7 +34,14 @@ function fmtDate(iso: string): string {
   return formatKstDate(iso, { year: '2-digit', month: '2-digit', day: '2-digit' });
 }
 
-export function UsersTable({ rows }: { rows: AdminUserRow[] }) {
+export function UsersTable({
+  rows,
+  consentTableReady = true,
+}: {
+  rows: AdminUserRow[];
+  /** showcase_consent_users(079) 조회 가능 여부 — false 면 동의 추가 버튼 비활성. */
+  consentTableReady?: boolean;
+}) {
   const router = useRouter();
   const [q, setQ] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
@@ -56,7 +69,7 @@ export function UsersTable({ rows }: { rows: AdminUserRow[] }) {
       </div>
 
       <div className="overflow-x-auto rounded-md border border-[#E8DCC9]">
-        <table className="w-full min-w-[760px] border-collapse text-sm">
+        <table className="w-full min-w-[840px] border-collapse text-sm">
           <thead>
             <tr className="bg-[#FAF7F2] text-[11px] text-[#8B7355]">
               <th className="px-3 py-2 text-left font-medium">이메일</th>
@@ -66,6 +79,9 @@ export function UsersTable({ rows }: { rows: AdminUserRow[] }) {
               <th className="px-2 py-2 text-right font-medium">결제</th>
               <th className="px-2 py-2 text-right font-medium">결제액</th>
               <th className="px-2 py-2 text-center font-medium">가입</th>
+              <th className="px-2 py-2 text-center font-medium" title="쇼케이스(홈 디자인 갤러리) 활용 동의">
+                쇼케이스
+              </th>
               <th className="px-2 py-2 text-center font-medium">조정</th>
             </tr>
           </thead>
@@ -74,6 +90,8 @@ export function UsersTable({ rows }: { rows: AdminUserRow[] }) {
               <RowGroup
                 key={r.user_id}
                 row={r}
+                consentTableReady={consentTableReady}
+                onConsentChanged={() => router.refresh()}
                 open={editing === r.user_id}
                 onToggle={() => setEditing((cur) => (cur === r.user_id ? null : r.user_id))}
                 onDone={() => {
@@ -84,7 +102,7 @@ export function UsersTable({ rows }: { rows: AdminUserRow[] }) {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-8 text-center text-xs text-[#8B7355]">
+                <td colSpan={9} className="px-3 py-8 text-center text-xs text-[#8B7355]">
                   검색 결과가 없습니다.
                 </td>
               </tr>
@@ -101,11 +119,15 @@ function RowGroup({
   open,
   onToggle,
   onDone,
+  consentTableReady,
+  onConsentChanged,
 }: {
   row: AdminUserRow;
   open: boolean;
   onToggle: () => void;
   onDone: () => void;
+  consentTableReady: boolean;
+  onConsentChanged: () => void;
 }) {
   return (
     <>
@@ -124,6 +146,13 @@ function RowGroup({
           {fmtDate(row.created_at)}
         </td>
         <td className="px-2 py-2 text-center">
+          <ShowcaseConsentCell
+            row={row}
+            ready={consentTableReady}
+            onChanged={onConsentChanged}
+          />
+        </td>
+        <td className="px-2 py-2 text-center">
           <button
             type="button"
             onClick={onToggle}
@@ -139,12 +168,68 @@ function RowGroup({
       </tr>
       {open && (
         <tr className="bg-[#FAF7F2]">
-          <td colSpan={8} className="px-3 py-3">
+          <td colSpan={9} className="px-3 py-3">
             <AdjustForm row={row} onDone={onDone} />
           </td>
         </tr>
       )}
     </>
+  );
+}
+
+/**
+ * 쇼케이스 동의 셀 — 운영자 추가 여부 토글 + 다른 경로(이벤트/알림장)로 동의한 경우 표시.
+ */
+function ShowcaseConsentCell({
+  row,
+  ready,
+  onChanged,
+}: {
+  row: AdminUserRow;
+  ready: boolean;
+  onChanged: () => void;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [err, setErr] = useState<string | null>(null);
+  const other = [row.showcaseViaEvent && '이벤트', row.showcaseViaInvitation && '알림장']
+    .filter(Boolean)
+    .join('·');
+
+  const toggle = () => {
+    const next = !row.showcaseAdded;
+    if (
+      next &&
+      !window.confirm(
+        `${row.email ?? row.user_id} 계정을 쇼케이스 활용 동의로 추가할까요?\n이 계정의 발행 알림장이 사진 있는 디자인까지 showcase 후보에 포함됩니다.`,
+      )
+    )
+      return;
+    setErr(null);
+    startTransition(async () => {
+      const res = await setShowcaseConsentUser({ userId: row.user_id, consent: next });
+      if (!res.ok) setErr(res.error ?? '실패');
+      else onChanged();
+    });
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-0.5">
+      <button
+        type="button"
+        onClick={toggle}
+        disabled={pending || !ready}
+        title={ready ? undefined : 'DB 마이그레이션 079 적용 후 사용할 수 있습니다'}
+        className={`whitespace-nowrap rounded border px-2 py-0.5 text-[11px] font-medium transition-colors disabled:opacity-50 ${
+          row.showcaseAdded
+            ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+            : 'border-[#D4C5B0] bg-white text-[#5C4633] hover:border-[#8B7355]'
+        }`}
+      >
+        {pending ? '…' : row.showcaseAdded ? '동의됨 ✓' : '동의 추가'}
+      </button>
+      {other && <span className="text-[10px] text-[#B0A088]">{other} 동의</span>}
+      {err && <span className="max-w-[120px] text-[10px] text-red-600">{err}</span>}
+    </div>
   );
 }
 

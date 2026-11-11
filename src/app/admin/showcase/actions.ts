@@ -30,6 +30,8 @@ export interface ShowcaseCandidate {
   heroImage: string;
   /** 실제 사진이 노출되는 디자인인지(포스터/액자 + heroImage). false 면 일러스트·텍스트 등 사진 없는 디자인. */
   hasPhoto: boolean;
+  /** 사진 없는 디자인의 미리보기용 content(파싱본). 사진 있는 디자인은 사진 썸네일을 쓰므로 생략. */
+  content?: InvitationContent;
 }
 
 // 실제 업로드 사진이 표지에 노출되는 레이아웃.
@@ -74,6 +76,12 @@ export async function listShowcaseCandidates(): Promise<
   const consentedUsers = new Set<string>(
     ((subs ?? []) as Array<{ user_id: string }>).map((s) => s.user_id),
   );
+  // 운영자가 가입자 내역에서 직접 동의로 추가한 계정(마이그 079). 미적용이면 무시.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: adminAdded } = await (admin as any)
+    .from('showcase_consent_users')
+    .select('user_id');
+  for (const r of (adminAdded ?? []) as Array<{ user_id: string }>) consentedUsers.add(r.user_id);
 
   // showcase_consent 는 자동생성 DB 타입(063 미반영)에 아직 없어 any 캐스팅.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -108,6 +116,7 @@ export async function listShowcaseCandidates(): Promise<
       weddingDate: row.wedding_date ?? '',
       heroImage: hasPhoto ? (parsed.data.main.heroImage as string) : '',
       hasPhoto,
+      ...(hasPhoto ? {} : { content: parsed.data }),
     });
   }
   return { ok: true, candidates };
